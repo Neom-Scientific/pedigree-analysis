@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Pedigree Analysis Tool</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="container flex justify-between items-center">
+                <div class="header-logo">
+                    <img src="./public/neom-logo.png" alt="Neom Scientific Solutions Pvt. Ltd." width="50" height="50"
+                        class="logo" />
+                    <div>
+                        <h1>Medical Pedigree Analysis Tool</h1>
+                        <p class="subtitle">Professional Genetic Counseling Software</p>
+                    </div>
+                </div>
+                <div class="header-controls flex gap-8">
+                    <button class="btn btn--outline btn--sm" id="exportBtn">Export Chart</button>
+                    <button class="btn btn--outline btn--sm" id="exportRiskBtn">Risk Report</button>
+                    <button class="btn btn--outline btn--sm" id="saveBtn">Save Data</button>
+                    <button class="btn btn--primary btn--sm" id="loadBtn">Load Data</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="app-body">
+            <div class="controls-panel">
+                <div class="control-group">
+                    <h3>Pedigree Setup</h3>
+                    <div class="control-buttons">
+                        <button class="btn btn--sm btn--primary" id="addProbandBtn">Add Proband</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Chart Controls</h3>
+                    <div class="control-buttons">
+                        <button class="btn btn--sm btn--secondary" id="zoomInBtn">Zoom In</button>
+                        <button class="btn btn--sm btn--secondary" id="zoomOutBtn">Zoom Out</button>
+                        <button class="btn btn--sm btn--secondary" id="resetViewBtn">Reset View</button>
+                        <button class="btn btn--sm btn--secondary" id="autoLayoutBtn">Auto Layout</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Add Relations</h3>
+                    <div class="control-buttons">
+                        <button class="btn btn--sm btn--primary" id="addParentBtn" disabled>Add Parent</button>
+                        <button class="btn btn--sm btn--primary" id="addChildBtn" disabled>Add Child</button>
+                        <button class="btn btn--sm btn--primary" id="addSpouseBtn" disabled>Add Spouse</button>
+                        <button class="btn btn--sm btn--primary" id="addSiblingBtn" disabled>Add Sibling</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Risk Analysis</h3>
+                    <div class="risk-settings">
+                        <div class="form-group">
+                            <label class="form-label">Inheritance Pattern</label>
+                            <select class="form-control form-control--sm" id="inheritanceSelect">
+                                <option value="autosomal_dominant">Autosomal Dominant</option>
+                                <option value="autosomal_recessive">Autosomal Recessive</option>
+                                <option value="x_linked">X-Linked</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Population Carrier Frequency</label>
+                            <input type="number" class="form-control form-control--sm" id="carrierFreqInput"
+                                value="0.01" step="0.001" min="0" max="1">
+                        </div>
+                        <button class="btn btn--sm btn--secondary btn--full-width" id="calculateRiskBtn">Update Risk
+                            Calculations</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Medical Legend</h3>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-symbol male-normal"></div><span>Male (Normal)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-symbol female-normal"></div><span>Female (Normal)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-symbol male-affected"></div><span>Male (Affected)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-symbol female-affected"></div><span>Female (Affected)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-symbol carrier"></div><span>Carrier</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-symbol proband-marker"></div><span>Proband</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-line"></div><span>Marriage</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-line separated">
+                                <div class="legend-line-slash"></div>
+                            </div>
+                            <span>Divorced / Separated</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-line vertical"></div><span>Offspring</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container" id="chartContainer">
+                <div class="chart-overlay" id="chartOverlay">
+                    <div class="start-prompt">
+                        <h2>Welcome to Medical Pedigree Analysis</h2>
+                        <p>Click "Add Proband" to begin building your family pedigree</p>
+                        <div class="generation-guide">
+                            <div class="gen-label">Generation I: Great-grandparents</div>
+                            <div class="gen-label">Generation II: Grandparents</div>
+                            <div class="gen-label gen-proband">Generation III: Parents & Proband ⭐</div>
+                            <div class="gen-label">Generation IV: Children</div>
+                            <div class="gen-label">Generation V: Grandchildren</div>
+                        </div>
+                    </div>
+                </div>
+                <svg id="pedigreeChart" width="100%" height="100%" viewBox="0 0 1400 900">
+                    <g id="generationLines"></g>
+                    <g id="connections"></g>
+                    <g id="individuals"></g>
+                    <g id="labels"></g>
+                </svg>
+            </div>
+
+            <div class="info-panel" id="infoPanel">
+                <div class="info-header">
+                    <h3>Individual Information</h3>
+                    <button class="btn btn--sm btn--outline" id="closeInfoBtn">×</button>
+                </div>
+
+                <div class="info-content" id="infoContent">
+                    <p class="info-placeholder">Click on an individual in the pedigree to view their information and
+                        calculated risks.</p>
+                </div>
+
+                <div class="info-form hidden" id="infoForm">
+                    <div class="form-group">
+                        <label class="form-label">Name/Initials</label>
+                        <input type="text" class="form-control" id="nameInput" placeholder="Enter name or initials">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Gender</label>
+                            <select class="form-control" id="genderSelect">
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="unknown">Unknown</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select class="form-control" id="statusSelect">
+                                <option value="normal">Normal</option>
+                                <option value="affected">Affected</option>
+                                <option value="carrier">Carrier</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Marital Status (with spouse)</label>
+                        <select class="form-control" id="maritalStatusSelect">
+                            <option value="married">Married</option>
+                            <option value="divorced">Divorced</option>
+                            <option value="separated">Separated</option>
+                            <option value="unmarried">Unmarried</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label">Current Age</label><input type="number"
+                                class="form-control" id="ageInput" min="0" max="150"></div>
+                        <div class="form-group"><label class="form-label">Birth Year</label><input type="number"
+                                class="form-control" id="birthYearInput" min="1900" max="2030"></div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label">Death Year</label><input type="number"
+                                class="form-control" id="deathYearInput" min="1900" max="2030"></div>
+                        <div class="form-group"><label class="form-label">Age at Death</label><input type="number"
+                                class="form-control" id="deathAgeInput" min="0" max="150"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Genetic Test Results</label>
+                        <select class="form-control" id="testResultSelect">
+                            <option value="">No test performed</option>
+                            <option value="positive">Positive for mutation</option>
+                            <option value="negative">Negative for mutation</option>
+                            <option value="carrier">Carrier detected</option>
+                            <option value="inconclusive">Inconclusive</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Medical Conditions/Diagnoses</label>
+                        <textarea class="form-control" id="conditionsInput" rows="2"
+                            placeholder="List medical conditions..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Clinical Remarks</label>
+                        <textarea class="form-control" id="remarksInput" rows="3"
+                            placeholder="Enter clinical notes and observations..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn--primary btn--sm" id="saveInfoBtn">Save Changes</button>
+                        <button class="btn btn--outline btn--sm" id="cancelInfoBtn">Cancel</button>
+                        <button class="btn btn--sm"
+                            style="background: var(--color-error); color: var(--color-btn-primary-text);"
+                            id="deleteIndividualBtn">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" accept=".json" style="display: none;">
+
+    <script src="app.js"></script>
+</body>
+
+</html>

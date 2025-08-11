@@ -82,7 +82,7 @@ class MedicalPedigreeAnalyzer {
         this.renderAllConnections(svg.getElementById('connections'));
         this.applyTransform();
     }
-    
+
     //renderMarriageLine to handle marital status ---
     renderMarriageLine(group, ind1, ind2) {
         const x1 = ind1.x < ind2.x ? ind1.x + 22 : ind1.x - 22;
@@ -97,7 +97,7 @@ class MedicalPedigreeAnalyzer {
         if (marriageInfo && (marriageInfo.status === 'divorced' || marriageInfo.status === 'separated')) {
             lineClass += ' marriage-line--separated';
         }
-        
+
         line.setAttribute('class', lineClass);
         group.appendChild(line);
 
@@ -114,7 +114,7 @@ class MedicalPedigreeAnalyzer {
 
     //renderParentChildLines for standard notation ---
     renderParentChildLines(group, child) {
-        const parents = child.parentIds?.map(id => this.getIndividualById(id)).filter(p => p).sort((a,b) => a.position - b.position) || [];
+        const parents = child.parentIds?.map(id => this.getIndividualById(id)).filter(p => p).sort((a, b) => a.position - b.position) || [];
         if (parents.length === 0) return;
 
         // Find all siblings to determine the sibship line
@@ -133,9 +133,9 @@ class MedicalPedigreeAnalyzer {
         const sibshipLineY = parentY + 50;
 
         if (parents.length === 1) {
-             // Line from single parent down to the sibship line
+            // Line from single parent down to the sibship line
             group.appendChild(this.createSvgElement('line', { x1: parents[0].x, y1: parentY + 22, x2: parents[0].x, y2: sibshipLineY, class: 'connection-line' }));
-             // Horizontal sibship line
+            // Horizontal sibship line
             group.appendChild(this.createSvgElement('line', { x1: firstSiblingX, y1: sibshipLineY, x2: lastSiblingX, y2: sibshipLineY, class: 'connection-line' }));
 
         } else if (parents.length === 2) {
@@ -176,7 +176,7 @@ class MedicalPedigreeAnalyzer {
 
         const affected = confirm('Is this parent affected by the condition?');
         const parent = this.createNewIndividual({ name, gender, affected, generation: Math.max(1, child.generation - 1), childrenIds: [child.id] });
-        
+
         this.pedigreeData.individuals.push(parent);
         child.parentIds = child.parentIds || [];
         child.parentIds.push(parent.id);
@@ -185,17 +185,17 @@ class MedicalPedigreeAnalyzer {
             const firstParent = existingParents[0];
             firstParent.spouseId = parent.id;
             parent.spouseId = firstParent.id;
-            
+
             // Add marriage info
             const status = prompt('Enter marital status (e.g., married, divorced, separated):', 'married');
-             if (firstParent.id < parent.id) {
+            if (firstParent.id < parent.id) {
                 firstParent.marriageInfo = { status: status || 'married' };
             } else {
                 parent.marriageInfo = { status: status || 'married' };
             }
             alert(`${parent.name} and ${firstParent.name} are now linked as spouses.`);
         }
-        
+
         this.autoLayout();
         this.calculateAllRisks();
         this.renderPedigree();
@@ -218,10 +218,10 @@ class MedicalPedigreeAnalyzer {
         } else {
             spouse.marriageInfo = { status: status || 'married' };
         }
-        
+
         this.pedigreeData.individuals.push(spouse);
         this.selectedIndividual.spouseId = spouse.id;
-        
+
         this.autoLayout();
         this.calculateAllRisks();
         this.renderPedigree();
@@ -243,7 +243,7 @@ class MedicalPedigreeAnalyzer {
         document.getElementById('testResultSelect').value = ind.testResult || '';
         document.getElementById('conditionsInput').value = ind.conditions || '';
         document.getElementById('remarksInput').value = ind.remarks || '';
-        
+
         // Handle marital status
         const spouse = this.getIndividualById(ind.spouseId);
         const maritalStatusSelect = document.getElementById('maritalStatusSelect');
@@ -264,7 +264,7 @@ class MedicalPedigreeAnalyzer {
     saveIndividualInfo() {
         if (!this.selectedIndividual) return;
         const ind = this.selectedIndividual;
-        
+
         ind.name = document.getElementById('nameInput').value;
         ind.gender = document.getElementById('genderSelect').value;
         const status = document.getElementById('statusSelect').value;
@@ -293,7 +293,7 @@ class MedicalPedigreeAnalyzer {
                 spouse.marriageInfo = { status: newStatus };
             }
         }
-        
+
         this.calculateAllRisks();
         this.renderPedigree();
         this.selectIndividual(ind.id); // Reselect to show updated info
@@ -343,7 +343,7 @@ class MedicalPedigreeAnalyzer {
             ind.y = this.generationY[generation - 1];
         });
     }
-    
+
     renderIndividual(group, ind) {
         const g = this.createSvgElement('g', { class: 'individual-group', 'data-id': ind.id });
         g.appendChild(this.createIndividualSymbol(ind));
@@ -360,7 +360,7 @@ class MedicalPedigreeAnalyzer {
         }
         group.appendChild(g);
     }
-    
+
     createIndividualSymbol(ind) {
         let symbol;
         if (ind.gender === 'unknown') {
@@ -447,7 +447,7 @@ class MedicalPedigreeAnalyzer {
         document.querySelectorAll('.individual-symbol.selected').forEach(el => el.classList.remove('selected'));
         const symbol = document.querySelector(`.individual-symbol[data-id="${id}"]`);
         if (symbol) symbol.classList.add('selected');
-        
+
         this.selectedIndividual = this.getIndividualById(id);
         this.showIndividualInfo(this.selectedIndividual);
         this.updateRelationshipButtons();
@@ -457,7 +457,7 @@ class MedicalPedigreeAnalyzer {
         if (!ind) return this.closeInfoPanel();
         if (!ind.calculatedRisks) ind.calculatedRisks = this.calculateIndividualRisk(ind);
         const infoContent = document.getElementById('infoContent');
-        
+
         let spouseName = 'N/A';
         if (ind.spouseId) {
             const spouse = this.getIndividualById(ind.spouseId);
@@ -485,7 +485,7 @@ class MedicalPedigreeAnalyzer {
                 ${ind.remarks ? `<div class="clinical-section"><h5>Clinical Remarks</h5><div class="clinical-text">${ind.remarks}</div></div>` : ''}
             </div>
             <button class="btn btn--primary btn--sm" id="editIndividualBtn">Edit Information</button>`;
-        
+
         document.getElementById('editIndividualBtn').addEventListener('click', () => this.editIndividual());
         infoContent.classList.remove('hidden');
         document.getElementById('infoForm').classList.add('hidden');
@@ -508,8 +508,8 @@ class MedicalPedigreeAnalyzer {
     calculateIndividualRisk(ind) {
         const { inheritancePattern: pattern, carrierFrequency: freq } = this.pedigreeData;
         return pattern === 'autosomal_dominant' ? this.calculateAutosmalDominantRisk(ind) :
-               pattern === 'autosomal_recessive' ? this.calculateAutosmalRecessiveRisk(ind, freq) :
-               pattern === 'x_linked' ? this.calculateXLinkedRisk(ind) : {};
+            pattern === 'autosomal_recessive' ? this.calculateAutosmalRecessiveRisk(ind, freq) :
+                pattern === 'x_linked' ? this.calculateXLinkedRisk(ind) : {};
     }
 
     calculateAutosmalDominantRisk(ind) {
@@ -549,33 +549,33 @@ class MedicalPedigreeAnalyzer {
         const parents = ind.parentIds?.map(id => this.getIndividualById(id)).filter(p => p);
         const isParentAffected = parents.some(p => p.affected);
         const areBothParentsCarriers = parents.length === 2 && parents.every(p => this.isKnownCarrier(p));
-        
+
         if (isParentAffected) {
             risks.carrier = 100;
         } else if (areBothParentsCarriers) {
             risks.carrier = 66.7; // 2/3 chance of being a carrier if phenotypically normal
             risks.affected = 25;
         } else {
-             // General population risk if no other information
-            risks.carrier = 2 * Math.sqrt(freq) * (1-Math.sqrt(freq)) * 100;
+            // General population risk if no other information
+            risks.carrier = 2 * Math.sqrt(freq) * (1 - Math.sqrt(freq)) * 100;
         }
 
         if (this.isKnownCarrier(ind)) {
-             const spouse = this.getIndividualById(ind.spouseId);
-             if (spouse) {
-                if(this.isKnownCarrier(spouse)) {
+            const spouse = this.getIndividualById(ind.spouseId);
+            if (spouse) {
+                if (this.isKnownCarrier(spouse)) {
                     risks.offspring_affected = 25;
                     risks.offspring_carrier = 50;
                 } else {
                     // Spouse risk is from general population
-                    risks.offspring_affected = (2 * Math.sqrt(freq) * (1-Math.sqrt(freq))) * 0.25 * 100;
+                    risks.offspring_affected = (2 * Math.sqrt(freq) * (1 - Math.sqrt(freq))) * 0.25 * 100;
                 }
-             }
+            }
         }
-        
+
         return risks;
     }
-    
+
     isKnownCarrier(ind) {
         if (!ind) return false;
         return ind.carrier || ind.testResult === 'carrier' || ind.affected || (ind.calculatedRisks && ind.calculatedRisks.carrier === 100);
@@ -599,7 +599,7 @@ class MedicalPedigreeAnalyzer {
         }
         return risks;
     }
-    
+
     getAffectedParents(ind) { return ind.parentIds?.map(id => this.getIndividualById(id)).filter(p => p?.affected).length || 0; }
 
     addSibling() {
@@ -616,7 +616,7 @@ class MedicalPedigreeAnalyzer {
             generation: this.selectedIndividual.generation,
             parentIds: [...this.selectedIndividual.parentIds]
         });
-        
+
         this.pedigreeData.individuals.push(sibling);
         this.selectedIndividual.parentIds?.forEach(pid => {
             const parent = this.getIndividualById(pid);
@@ -668,7 +668,7 @@ class MedicalPedigreeAnalyzer {
         const genRoman = this.toRoman(generation);
         const individualsInGen = this.pedigreeData.individuals.filter(ind => ind.generation === generation);
         const nextPos = position || (individualsInGen.length ? Math.max(...individualsInGen.map(i => i.position)) + 1 : 1);
-        
+
         return {
             id: `${genRoman}-${nextPos}`,
             name, gender, generation, position: nextPos, affected: affected || false, carrier: false,
@@ -730,17 +730,17 @@ class MedicalPedigreeAnalyzer {
         try {
             const svg = document.getElementById('pedigreeChart');
             const svgData = new XMLSerializer().serializeToString(svg);
-            
-            const blob = new Blob([svgData], {type: 'image/svg+xml'});
+
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `pedigree-${new Date().toISOString().slice(0,10)}.svg`;
+            link.download = `pedigree-${new Date().toISOString().slice(0, 10)}.svg`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            
+
             alert('Chart exported successfully as SVG!');
         } catch (error) {
             console.error('Export error:', error);
@@ -752,39 +752,39 @@ class MedicalPedigreeAnalyzer {
         const report = this.generateRiskReport();
         const blob = new Blob([report], { type: 'text/plain' });
         const link = document.createElement('a');
-        link.download = `risk-report-${new Date().toISOString().slice(0,10)}.txt`;
+        link.download = `risk-report-${new Date().toISOString().slice(0, 10)}.txt`;
         link.href = URL.createObjectURL(blob);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(link.href);
-        
+
         alert('Risk assessment report exported successfully!');
     }
 
     generateRiskReport() {
         const proband = this.getIndividualById(this.pedigreeData.probandId);
         const reportDate = new Date().toLocaleDateString();
-        
+
         let report = `GENETIC RISK ASSESSMENT REPORT\n`;
         report += `Generated on: ${reportDate}\n`;
         report += `Inheritance Pattern: ${this.pedigreeData.inheritancePattern.replace('_', ' ').toUpperCase()}\n`;
         report += `Population Carrier Frequency: ${this.pedigreeData.carrierFrequency}\n`;
         report += `Proband: ${proband ? proband.name : 'Unknown'} (${this.pedigreeData.probandId})\n\n`;
-        
+
         report += `INDIVIDUAL RISK ASSESSMENTS:\n`;
         report += `${'='.repeat(50)}\n\n`;
-        
+
         this.pedigreeData.individuals.forEach(individual => {
             report += `${individual.name} (${individual.id})\n`;
             report += `Generation: ${this.toRoman(individual.generation)}\n`;
             report += `Gender: ${individual.gender.charAt(0).toUpperCase() + individual.gender.slice(1)}\n`;
             report += `Status: ${individual.affected ? 'Affected' : individual.carrier ? 'Carrier' : 'Normal'}\n`;
-            
+
             if (individual.testResult) {
                 report += `Genetic Test: ${individual.testResult}\n`;
             }
-            
+
             if (individual.calculatedRisks && Object.keys(individual.calculatedRisks).length > 0) {
                 report += `Calculated Risks:\n`;
                 Object.entries(individual.calculatedRisks).forEach(([type, value]) => {
@@ -793,21 +793,21 @@ class MedicalPedigreeAnalyzer {
                     }
                 });
             }
-            
+
             if (individual.conditions) {
                 report += `Medical Conditions: ${individual.conditions}\n`;
             }
-            
+
             report += `\n`;
         });
-        
+
         report += `\nRECOMMENDations:\n`;
         report += `${'='.repeat(20)}\n`;
         report += `- Genetic counseling recommended for all at-risk individuals\n`;
         report += `- Consider genetic testing for carriers and at-risk family members\n`;
         report += `- Regular medical surveillance for affected individuals\n`;
         report += `- Family planning counseling for reproductive-age individuals\n`;
-        
+
         return report;
     }
 
@@ -816,13 +816,13 @@ class MedicalPedigreeAnalyzer {
             const dataStr = JSON.stringify(this.pedigreeData, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const link = document.createElement('a');
-            link.download = `pedigree-data-${new Date().toISOString().slice(0,10)}.json`;
+            link.download = `pedigree-data-${new Date().toISOString().slice(0, 10)}.json`;
             link.href = URL.createObjectURL(blob);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(link.href);
-            
+
             alert('Pedigree data saved successfully!');
         } catch (error) {
             console.error('Save error:', error);
@@ -837,7 +837,7 @@ class MedicalPedigreeAnalyzer {
     handleFileLoad(event) {
         const file = event.target.files[0];
         if (!file) return;
-        
+
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
@@ -854,7 +854,7 @@ class MedicalPedigreeAnalyzer {
             }
         };
         reader.readAsText(file);
-        
+
         event.target.value = '';
     }
     getIndividualById(id) { return this.pedigreeData.individuals.find(ind => ind.id === id); }
@@ -872,4 +872,110 @@ class MedicalPedigreeAnalyzer {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => new MedicalPedigreeAnalyzer());
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+if (
+    !window.location.pathname.endsWith('login.html') &&
+    !window.location.pathname.endsWith('register.html') &&
+    !getCookie('pedigree_analysis_tool_user')
+) {
+    window.location.href = 'login.html';
+}
+
+if (window.location.pathname.endsWith('login.html')) {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            let errorDiv = document.getElementById('loginError');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.id = 'loginError';
+                errorDiv.className = 'status status--error mt-8';
+                loginForm.parentNode.appendChild(errorDiv);
+            }
+            errorDiv.classList.add('hidden');
+            errorDiv.textContent = '';
+
+            try {
+                const res = await fetch('https://trf-dashboard-bay.vercel.app/api/login-insert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                const result = Array.isArray(data) ? data[0] : data;
+                if (res.ok && result.status === 200) {
+                    // Store user info in cookie (expires in 7 days)
+                    document.cookie = `pedigree_analysis_tool_user=${encodeURIComponent(JSON.stringify(result.data))}; path=/; max-age=${60 * 60 * 24 * 7}`;
+                    console.log('document.cookie', document.cookie);
+                    window.location.href = 'index.html';
+                } else {
+                    errorDiv.textContent = result.message || 'Invalid username or password.';
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.classList.remove('hidden');
+            }
+        });
+    }
+} else if (window.location.pathname.endsWith('register.html')) {
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const name = document.getElementById('name').value.trim();
+            const hospital_name = document.getElementById('hospital_name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone_no = document.getElementById('phone_no').value.trim();
+            const password = Math.random().toString(36).slice(-8);
+            let errorDiv = document.getElementById('registerError');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.id = 'registerError';
+                errorDiv.className = 'status status--error mt-8';
+                registerForm.parentNode.appendChild(errorDiv);
+            }
+            errorDiv.classList.add('hidden');
+            errorDiv.textContent = '';
+
+            try {
+                const payload = {
+                    data:{
+                        name,
+                        hospital_name,
+                        email,
+                        phone_no,
+                        password
+                    }
+                }
+                const res = await fetch('https://trf-dashboard-bay.vercel.app/api/request-insert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                const result = Array.isArray(data) ? data[0] : data;
+                if (res.ok && result.status === 200) {
+                    window.location.href = 'login.html';
+                } else {
+                    errorDiv.textContent = result.message || 'Registration failed.';
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.classList.remove('hidden');
+            }
+        });
+    }
+} else {
+    new MedicalPedigreeAnalyzer();
+}

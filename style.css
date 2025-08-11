@@ -680,7 +680,9 @@ select.form-control {
   margin-top: var(--space-8);
   margin-bottom: var(--space-8);
 }
-
+.mb-16 {
+  margin-bottom: var(--space-16);
+}
 .p-0 {
   padding: 0;
 }

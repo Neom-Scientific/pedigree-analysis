@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedigree Analysis Tool</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Card centered in the viewport -->
+    <div class="container flex flex-col items-center justify-center" style="min-height:80vh;">
+        <div class="card" style="max-width:400px; width:100%; padding: 1.5rem 1.5rem;">
+            <div class="card__body">
+                <div class="header-logo flex flex-row items-center mb-8" style="gap: 0.25rem;">
+                    <img src="./public/neom-logo.png" alt="Neom Scientific Solutions Pvt. Ltd." width="35" height="35"
+                        class="logo" />
+                    <h1 style="margin-top: 0.25rem; font-size: 1.8rem; font-weight: 600; text-align: center;">Pedigree Analysis Tool</h1>
+                </div>
+                <p class="subtitle" style="margin: 16px 0;">Welcome to the Pedigree Analysis Tool. Please log in to continue.</p>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" id="username" name="username" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" id="password" name="password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width mt-8">Login</button>
+                </form>
+                <p class="mt-8">
+                    Don't have Username and Password? <a href="register.html" class="link">Register here</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+<script src="app.js"></script>
+
+</html>

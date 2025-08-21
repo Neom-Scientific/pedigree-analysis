@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 
-<body>
+<body data-color-scheme="light">
     <!-- Card centered in the viewport -->
     <div class="container flex flex-col items-center justify-center" style="min-height:80vh;">
         <div class="card" style="max-width:400px; width:100%; padding: 1.5rem 1.5rem;">
@@ -38,6 +38,19 @@
         </div>
     </div>
 </body>
+<script>
+    const btn = document.getElementById('themeToggleBtn');
+    function updateThemeBtn() {
+        const isDark = document.body.getAttribute('data-color-scheme') === 'dark';
+        btn.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+    }
+    btn.onclick = function () {
+        const isDark = document.body.getAttribute('data-color-scheme') === 'dark';
+        document.body.setAttribute('data-color-scheme', isDark ? 'light' : 'dark');
+        updateThemeBtn();
+    };
+    updateThemeBtn();
+</script>
 <script src="app.js"></script>
 
 </html>

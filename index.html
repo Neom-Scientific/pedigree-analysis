@@ -7,9 +7,30 @@
     <title>Pedigree Analysis Tool</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --bg-color: #222;
+            --text-color: #fff;
+        }
+
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        body.light-mode {
+            --bg-color: #fff;
+            --text-color: #222;
+        }
+
+        body.dark-mode {
+            --bg-color: #222;
+            --text-color: #fff;
+        }
+    </style>
 </head>
 
-<body>
+<body data-color-scheme="light">
     <div class="app-container">
         <header class="app-header">
             <div class="container flex justify-between items-center">
@@ -22,10 +43,12 @@
                     </div>
                 </div>
                 <div class="header-controls flex gap-8">
+                    <button class="btn btn--outline btn--sm" id="clearBtn">Clear Data</button>
                     <button class="btn btn--outline btn--sm" id="exportBtn">Export Chart</button>
                     <button class="btn btn--outline btn--sm" id="exportRiskBtn">Risk Report</button>
                     <button class="btn btn--outline btn--sm" id="saveBtn">Save Data</button>
                     <button class="btn btn--primary btn--sm" id="loadBtn">Load Data</button>
+                    <button class="btn btn--outline btn--sm" id="themeToggleBtn">Dark Mode</button>
                 </div>
             </div>
         </header>
@@ -56,6 +79,13 @@
                         <button class="btn btn--sm btn--primary" id="addChildBtn" disabled>Add Child</button>
                         <button class="btn btn--sm btn--primary" id="addSpouseBtn" disabled>Add Spouse</button>
                         <button class="btn btn--sm btn--primary" id="addSiblingBtn" disabled>Add Sibling</button>
+                        <button class="btn btn--sm btn--primary" id="addPragnancyBtn" disabled>Add Pregnancy</button>
+                        <button class="btn btn--sm btn--primary" id="addTwinBtn" disabled>Add Twin</button>
+                        <button class="btn btn--sm btn--primary" id="addTerminationBtn" disabled>Add
+                            Termination</button>
+                        <button class="btn btn--sm btn--primary" id="addNoOffspringBtn" disabled>
+                            Add No Offspring / Infertility
+                        </button>
                     </div>
                 </div>
 
@@ -95,23 +125,301 @@
                         <div class="legend-item">
                             <div class="legend-symbol female-affected"></div><span>Female (Affected)</span>
                         </div>
+                        <!-- Adopted out of family (male) -->
                         <div class="legend-item">
-                            <div class="legend-symbol carrier"></div><span>Carrier</span>
+                            <svg width="40" height="50" style="vertical-align: middle;">
+                                <!-- Left bracket -->
+                                <line x1="0" y1="16" x2="0" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="0" y1="16" x2="6" y2="16" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="0" y1="40" x2="6" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Right bracket -->
+                                <line x1="40" y1="16" x2="40" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="34" y1="16" x2="40" y2="16" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="34" y1="40" x2="40" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Square -->
+                                <rect x="10" y="18" width="20" height="20" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" />
+                                <!-- Solid vertical line -->
+                                <line x1="20" y1="0" x2="20" y2="16" stroke="var(--legend-stroke)" stroke-width="2" />
+                            </svg>
+                            <span>Male adopted out of family</span>
+                        </div>
+                        <!-- Adopted out of family (female) -->
+                        <div class="legend-item">
+                            <svg width="40" height="50" style="vertical-align: middle;">
+                                <!-- Left bracket -->
+                                <line x1="2" y1="16" x2="2" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="2" y1="16" x2="8" y2="16" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="2" y1="40" x2="8" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Right bracket -->
+                                <line x1="38" y1="16" x2="38" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="32" y1="16" x2="38" y2="16" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="32" y1="40" x2="38" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Circle -->
+                                <circle cx="20" cy="28" r="12" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" />
+                                <!-- Solid vertical line -->
+                                <line x1="20" y1="0" x2="20" y2="16" stroke="var(--legend-stroke)" stroke-width="2" />
+                            </svg>
+                            <span>Female adopted out of family</span>
+                        </div>
+                        <!-- Adopted into family (male) -->
+                        <div class="legend-item">
+                            <svg width="40" height="50" style="vertical-align: middle;">
+                                <!-- Left bracket -->
+                                <line x1="0" y1="16" x2="0" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="0" y1="16" x2="6" y2="16" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="0" y1="40" x2="6" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Right bracket -->
+                                <line x1="40" y1="16" x2="40" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="34" y1="16" x2="40" y2="16" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="34" y1="40" x2="40" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Square -->
+                                <rect x="10" y="18" width="20" height="20" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" />
+                                <!-- Dashed vertical line -->
+                                <line x1="20" y1="0" x2="20" y2="16" stroke="var(--legend-stroke)" stroke-width="2"
+                                    stroke-dasharray="4,4" />
+                            </svg>
+                            <span>Male adopted into family</span>
+                        </div>
+                        <!-- Adopted into family (female) -->
+                        <div class="legend-item">
+                            <svg width="40" height="50" style="vertical-align: middle;">
+                                <!-- Left bracket -->
+                                <line x1="2" y1="16" x2="2" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="2" y1="16" x2="8" y2="16" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="2" y1="40" x2="8" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Right bracket -->
+                                <line x1="38" y1="16" x2="38" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="32" y1="16" x2="38" y2="16" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="32" y1="40" x2="38" y2="40" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Circle -->
+                                <circle cx="20" cy="28" r="12" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" />
+                                <!-- Dashed vertical line -->
+                                <line x1="20" y1="0" x2="20" y2="16" stroke="var(--legend-stroke)" stroke-width="2"
+                                    stroke-dasharray="4,4" />
+                            </svg>
+                            <span>Female adopted into family</span>
+                        </div>
+                        <!-- Identical male twins -->
+                        <div class="legend-item">
+                            <svg width="60" height="50" style="vertical-align: middle;">
+                                <!-- Parent line -->
+                                <line x1="30" y1="0" x2="30" y2="10" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="22" y1="10" x2="38" y2="10" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Twin diagonal lines -->
+                                <line x1="30" y1="10" x2="14" y2="30" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="30" y1="10" x2="46" y2="30" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Squares (male twins) -->
+                                <rect x="6" y="30" width="16" height="16" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" />
+                                <rect x="38" y="30" width="16" height="16" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" />
+                            </svg>
+                            <span>Identical male twins</span>
+                        </div>
+                        <!-- Identical female twins -->
+                        <div class="legend-item">
+                            <svg width="60" height="50" style="vertical-align: middle;">
+                                <!-- Parent line -->
+                                <line x1="30" y1="0" x2="30" y2="10" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="22" y1="10" x2="38" y2="10" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Twin diagonal lines -->
+                                <line x1="30" y1="10" x2="14" y2="30" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="30" y1="10" x2="46" y2="30" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Circles (female twins) -->
+                                <circle cx="14" cy="38" r="8" stroke="var(--legend-stroke)" fill="var(--legend-fill)" />
+                                <circle cx="46" cy="38" r="8" stroke="var(--legend-stroke)" fill="var(--legend-fill)" />
+                            </svg>
+                            <span>Identical female twins</span>
+                        </div>
+                        <!-- Fraternal male twins -->
+                        <div class="legend-item">
+                            <svg width="60" height="50" style="vertical-align: middle;">
+                                <!-- Parent line -->
+                                <line x1="30" y1="0" x2="30" y2="10" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Twin diagonal lines -->
+                                <line x1="30" y1="10" x2="14" y2="30" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="30" y1="10" x2="46" y2="30" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Squares (male twins) -->
+                                <rect x="6" y="30" width="16" height="16" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" />
+                                <rect x="38" y="30" width="16" height="16" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" />
+                            </svg>
+                            <span>Fraternal male twins</span>
+                        </div>
+                        <!-- Fraternal female twins -->
+                        <div class="legend-item">
+                            <svg width="60" height="50" style="vertical-align: middle;">
+                                <!-- Parent line -->
+                                <line x1="30" y1="0" x2="30" y2="10" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Twin diagonal lines -->
+                                <line x1="30" y1="10" x2="14" y2="30" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="30" y1="10" x2="46" y2="30" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Circles (female twins) -->
+                                <circle cx="14" cy="38" r="8" stroke="var(--legend-stroke)" fill="var(--legend-fill)" />
+                                <circle cx="46" cy="38" r="8" stroke="var(--legend-stroke)" fill="var(--legend-fill)" />
+                            </svg>
+                            <span>Fraternal female twins</span>
+                        </div>
+                        <!-- Fraternal male-female twins -->
+                        <div class="legend-item">
+                            <svg width="60" height="50" style="vertical-align: middle;">
+                                <!-- Parent line -->
+                                <line x1="30" y1="0" x2="30" y2="10" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Twin diagonal lines -->
+                                <line x1="30" y1="10" x2="14" y2="30" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="30" y1="10" x2="46" y2="30" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Square (male twin) -->
+                                <rect x="6" y="30" width="16" height="16" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" />
+                                <!-- Circle (female twin) -->
+                                <circle cx="46" cy="38" r="8" stroke="var(--legend-stroke)" fill="var(--legend-fill)" />
+                            </svg>
+                            <span>Fraternal male & female twins</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-symbol proband-marker"></div><span>Proband</span>
+                            <svg width="60" height="40" style="vertical-align: middle;">
+                                <!-- Square (male) -->
+                                <rect x="40" y="10" width="20" height="20" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" stroke-width="2" />
+                                <!-- Smaller cursor arrow, left of the square, pointing right -->
+                                <g transform="translate(24,16) scale(0.35) rotate(60)">
+                                    <path d="M2,2 L2,32 L10,26 L14,36 L18,34 L14,24 L30,24 Z" fill="var(--legend-fill)"
+                                        stroke="var(--legend-stroke)" stroke-width="2" />
+                                </g>
+                            </svg>
+                            <span>Proband</span>
+                        </div>
+
+                        <div class="legend-item">
+                            <svg width="40" height="16" style="vertical-align: middle;">
+                                <line x1="4" y1="8" x2="36" y2="8" class="marriage-line-double" stroke-width="2"
+                                    stroke="var(--legend-stroke)" />
+                                <line x1="14" y1="4" x2="18" y2="12" class="marriage-line-slash" stroke-width="2"
+                                    stroke="var(--legend-stroke)" />
+                                <line x1="22" y1="4" x2="26" y2="12" class="marriage-line-slash" stroke-width="2"
+                                    stroke="var(--legend-stroke)" />
+                            </svg>
+                            <span>Divorced</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-line"></div><span>Marriage</span>
+                            <svg width="40" height="16" style="vertical-align: middle;">
+                                <line x1="4" y1="6" x2="36" y2="6" class="marriage-line-double" stroke-width="2"
+                                    stroke="var(--legend-stroke)" />
+                                <line x1="4" y1="10" x2="36" y2="10" class="marriage-line-double" stroke-width="2"
+                                    stroke="var(--legend-stroke)" />
+                            </svg>
+                            <span>Consanguinity</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-line separated">
-                                <div class="legend-line-slash"></div>
-                            </div>
-                            <span>Divorced / Separated</span>
+                            <svg width="40" height="40" style="vertical-align: middle;">
+                                <circle cx="20" cy="20" r="16" stroke="var(--legend-stroke)" stroke-dasharray="4,4"
+                                    fill="var(--legend-fill)" />
+                                <text x="20" y="25" text-anchor="middle" font-size="16"
+                                    fill="var(--legend-stroke)">P</text>
+                            </svg>
+                            <span>Female</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-line vertical"></div><span>Offspring</span>
+                            <svg width="40" height="40" style="vertical-align: middle;">
+                                <rect x="8" y="8" width="24" height="24" stroke="var(--legend-stroke)"
+                                    stroke-dasharray="4,4" fill="var(--legend-fill)" />
+                                <text x="20" y="25" text-anchor="middle" font-size="16"
+                                    fill="var(--legend-stroke)">P</text>
+                            </svg>
+                            <span>Male</span>
+                        </div>
+                        <div class="legend-item">
+                            <svg width="40" height="40" style="vertical-align: middle;">
+                                <polygon points="20,6 34,20 20,34 6,20" stroke="var(--legend-stroke)"
+                                    stroke-dasharray="4,4" fill="var(--legend-fill)" />
+                                <text x="20" y="25" text-anchor="middle" font-size="16"
+                                    fill="var(--legend-stroke)">P</text>
+                            </svg>
+                            <span>Unknown</span>
+                        </div>
+                        <div class="legend-item">
+                            <svg width="40" height="40" style="vertical-align: middle;">
+                                <circle cx="20" cy="20" r="16" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" />
+                                <line x1="6" y1="6" x2="34" y2="34" stroke="var(--legend-stroke)" stroke-width="2" />
+                            </svg>
+                            <span>Deceased Female</span>
+                        </div>
+                        <div class="legend-item">
+                            <svg width="40" height="40" style="vertical-align: middle;">
+                                <rect x="8" y="8" width="24" height="24" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" />
+                                <line x1="4" y1="4" x2="36" y2="36" stroke="var(--legend-stroke)" stroke-width="2" />
+                            </svg>
+                            <span>Deceased Male</span>
+                        </div>
+                        <div class="legend-item">
+                            <svg width="40" height="40" style="vertical-align: middle;">
+                                <!-- Vertical line -->
+                                <line x1="20" y1="4" x2="20" y2="20" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Triangle: left side -->
+                                <line x1="20" y1="20" x2="10" y2="34" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Triangle: right side -->
+                                <line x1="20" y1="20" x2="30" y2="34" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Triangle: bottom side -->
+                                <line x1="10" y1="34" x2="30" y2="34" stroke="var(--legend-stroke)" stroke-width="2" />
+                            </svg>
+                            <span>Spontaneous miscarriage</span>
+                        </div>
+                        <div class="legend-item">
+                            <svg width="40" height="40" style="vertical-align: middle;">
+                                <!-- Vertical line -->
+                                <line x1="20" y1="4" x2="20" y2="20" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Triangle: left side -->
+                                <line x1="20" y1="20" x2="10" y2="34" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Triangle: right side -->
+                                <line x1="20" y1="20" x2="30" y2="34" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Triangle: bottom side -->
+                                <line x1="10" y1="34" x2="30" y2="34" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Diagonal cross line -->
+                                <line x1="16" y1="38" x2="28" y2="22" stroke="var(--legend-stroke)" stroke-width="2" />
+                            </svg>
+                            <span>Termination of pregnancy</span>
+                        </div>
+                        <div class="legend-item">
+                            <svg width="60" height="40" style="vertical-align: middle;">
+                                <!-- Female (circle) -->
+                                <circle cx="14" cy="20" r="10" stroke="var(--legend-stroke)" fill="var(--legend-fill)"
+                                    stroke-width="2" />
+                                <!-- Male (square) -->
+                                <rect x="36" y="10" width="20" height="20" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" stroke-width="2" />
+                                <!-- Marriage line -->
+                                <line x1="24" y1="20" x2="36" y2="20" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Vertical line (no offspring) -->
+                                <line x1="30" y1="20" x2="30" y2="36" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Short horizontal bar at bottom -->
+                                <line x1="26" y1="36" x2="34" y2="36" stroke="var(--legend-stroke)" stroke-width="2" />
+                            </svg>
+                            <span>No offspring by choice</span>
+                        </div>
+                        <div class="legend-item">
+                            <svg width="60" height="40" style="vertical-align: middle;">
+                                <!-- Female (circle) -->
+                                <circle cx="14" cy="20" r="10" stroke="var(--legend-stroke)" fill="var(--legend-fill)"
+                                    stroke-width="2" />
+                                <!-- Male (square) -->
+                                <rect x="36" y="10" width="20" height="20" stroke="var(--legend-stroke)"
+                                    fill="var(--legend-fill)" stroke-width="2" />
+                                <!-- Marriage line -->
+                                <line x1="24" y1="20" x2="36" y2="20" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Vertical line (infertility) -->
+                                <line x1="30" y1="20" x2="30" y2="36" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <!-- Double short horizontal bars at bottom -->
+                                <line x1="26" y1="36" x2="34" y2="36" stroke="var(--legend-stroke)" stroke-width="2" />
+                                <line x1="26" y1="39" x2="34" y2="39" stroke="var(--legend-stroke)" stroke-width="2" />
+                            </svg>
+                            <span>Infertility</span>
                         </div>
                     </div>
                 </div>
@@ -184,6 +492,13 @@
                             <option value="unmarried">Unmarried</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Deceased</label>
+                        <select class="form-control" id="deceasedSelect">
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
 
                     <div class="form-row">
                         <div class="form-group"><label class="form-label">Current Age</label><input type="number"
@@ -235,7 +550,19 @@
     </div>
 
     <input type="file" id="fileInput" accept=".json" style="display: none;">
-
+    <script>
+        const btn = document.getElementById('themeToggleBtn');
+        function updateThemeBtn() {
+            const isDark = document.body.getAttribute('data-color-scheme') === 'dark';
+            btn.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+        }
+        btn.onclick = function () {
+            const isDark = document.body.getAttribute('data-color-scheme') === 'dark';
+            document.body.setAttribute('data-color-scheme', isDark ? 'light' : 'dark');
+            updateThemeBtn();
+        };
+        updateThemeBtn();
+    </script>
     <script src="app.js"></script>
 </body>
 

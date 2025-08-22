@@ -55,7 +55,7 @@ class MedicalPedigreeAnalyzer {
             ['addNoOffspringBtn', 'click', () => this.addNoOffspringOrInfertility()],
         ];
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Delete') {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
                 if (this.selectedIndividuals && this.selectedIndividuals.length > 0) {
                     this.deleteSelectedIndividuals();
                 }
@@ -421,6 +421,7 @@ class MedicalPedigreeAnalyzer {
         const parentY = Math.min(...parents.map(p => p.y));
         const sibshipLineY = parentY + 50;
 
+
         if (originalSiblings.length === 1 && parents.length === 2) {
             const parent1 = parents[0];
             const parent2 = parents[1];
@@ -430,21 +431,15 @@ class MedicalPedigreeAnalyzer {
             const childY = childNode.y - 22; // top of the child symbol
 
             // Draw a single straight vertical line from parents' midpoint (at child's x) to child
-            const lineAttrs = {
+            group.appendChild(this.createSvgElement('line', {
                 x1: childX, y1: parentY,
                 x2: childX, y2: childY,
                 class: 'connection-line'
-            };
-            // If adopted in, use dashed line
-            if (childNode.isAdopted && childNode.adoptedDirection === 'in') {
-                lineAttrs['stroke-dasharray'] = '4,4';
-                lineAttrs['stroke'] = 'var(--color-text)';
-                lineAttrs['stroke-width'] = 2;
-            }
-            group.appendChild(this.createSvgElement('line', lineAttrs));
+            }));
 
             return;
         }
+
 
         // Multiple siblings: draw standard sibship line
         if (parents.length === 1) {
@@ -654,6 +649,7 @@ class MedicalPedigreeAnalyzer {
         alert(`Parent ${name} added successfully!`);
     }
 
+
     addSpouse() {
         if (!this.selectedIndividual) return;
         const name = prompt('Enter spouse name:');
@@ -693,6 +689,19 @@ class MedicalPedigreeAnalyzer {
 
         this.pedigreeData.individuals.push(spouse);
 
+        // --- FIX: Add spouse as parent to all existing children ---
+        const parent = this.selectedIndividual;
+        if (parent.childrenIds && parent.childrenIds.length) {
+            parent.childrenIds.forEach(childId => {
+                const child = this.getIndividualById(childId);
+                if (child && Array.isArray(child.parentIds)) {
+                    if (!child.parentIds.includes(spouse.id)) {
+                        child.parentIds.push(spouse.id);
+                    }
+                }
+            });
+        }
+
         // // --- FIX: Add spouse as parent to all existing children ---
         // const parent = this.selectedIndividual;
         // if (parent.childrenIds && parent.childrenIds.length) {
@@ -700,29 +709,16 @@ class MedicalPedigreeAnalyzer {
         //         const child = this.getIndividualById(childId);
         //         if (child && Array.isArray(child.parentIds)) {
         //             if (!child.parentIds.includes(spouse.id)) {
-        //                 child.parentIds.push(spouse.id);
+        //                 const addSpouse = confirm(
+        //                     `Should the new spouse (${spouse.name}) also be set as a parent of ${child.name}?`
+        //                 );
+        //                 if (addSpouse) {
+        //                     child.parentIds.push(spouse.id);
+        //                 }
         //             }
         //         }
         //     });
         // }
-        const parent = this.selectedIndividual;
-        if (parent.childrenIds && parent.childrenIds.length) {
-            parent.childrenIds.forEach(childId => {
-                const child = this.getIndividualById(childId);
-                if (child) {
-                    // Add spouse as parent if not already
-                    if (!Array.isArray(child.parentIds)) child.parentIds = [];
-                    if (!child.parentIds.includes(spouse.id)) {
-                        child.parentIds.push(spouse.id);
-                    }
-                    // Add child to spouse's childrenIds if not already
-                    spouse.childrenIds = spouse.childrenIds || [];
-                    if (!spouse.childrenIds.includes(child.id)) {
-                        spouse.childrenIds.push(child.id);
-                    }
-                }
-            });
-        }
 
         this.autoLayout();
         this.calculateAllRisks();
@@ -813,128 +809,6 @@ class MedicalPedigreeAnalyzer {
         this.renderPedigree();
         if (this.selectedIndividual) this.selectIndividual(this.selectedIndividual.id);
         alert(input === '1' ? 'No offspring by choice added.' : 'Infertility added.');
-    }
-
-
-    addSibling() {
-        if (!this.selectedIndividual || !this.selectedIndividual.parentIds || this.selectedIndividual.parentIds.length === 0) {
-            alert("Cannot add a sibling to an individual without parents in the chart.");
-            return;
-        }
-        const name = prompt('Enter sibling name:');
-        if (!name) return;
-        const genderInput = prompt('Select sibling gender:\n1 = Male\n2 = Female\n3 = Unknown', '1');
-        let gender;
-        if (genderInput === '1') gender = 'male';
-        else if (genderInput === '2') gender = 'female';
-        else if (genderInput === '3') gender = 'unknown';
-        else return;
-        const affected = confirm('Is this sibling affected by the condition?');
-
-        // Ask if biological or adopted
-        const siblingType = prompt('Is the sibling biological or adopted?\n1 = Biological\n2 = Adopted', '1');
-        let adoptedType = null;
-        if (siblingType === '2') {
-            adoptedType = prompt('Is the sibling adopted into the family or out of the family?\n1 = Adopted In\n2 = Adopted Out', '1');
-        }
-
-        const sibling = this.createNewIndividual({
-            name, gender, affected,
-            generation: this.selectedIndividual.generation,
-            parentIds: [...this.selectedIndividual.parentIds]
-        });
-
-        // Mark adopted status
-        if (siblingType === '2') {
-            sibling.isAdopted = true;
-            if (adoptedType === '1') {
-                sibling.adoptedDirection = 'in';
-            } else if (adoptedType === '2') {
-                sibling.adoptedDirection = 'out';
-            }
-        }
-
-        // Lock position after creation
-
-        this.pedigreeData.individuals.push(sibling);
-        this.selectedIndividual.parentIds?.forEach(pid => {
-            const parent = this.getIndividualById(pid);
-            if (parent) {
-                parent.childrenIds = parent.childrenIds || [];
-                parent.childrenIds.push(sibling.id);
-            }
-        });
-
-        this.autoLayout();
-        this.calculateAllRisks();
-        this.renderPedigree();
-        if (this.selectedIndividual) this.selectIndividual(this.selectedIndividual.id);
-        alert(`Sibling ${name} added successfully!`);
-    }
-
-    addChild() {
-        if (!this.selectedIndividual) return;
-        const parent1 = this.selectedIndividual;
-        const parent2 = this.getIndividualById(parent1.spouseId);
-
-        if (!parent2) {
-            alert(`${parent1.name} needs a spouse to add a child. Please add a spouse first.`);
-            return;
-        }
-
-        const name = prompt('Enter child name:');
-        if (!name) return;
-        // Prompt for gender: 1 = Male, 2 = Female, 3 = Unknown
-        const genderInput = prompt('Select child gender:\n1 = Male\n2 = Female\n3 = Unknown', '1');
-        let gender;
-        if (genderInput === '1') gender = 'male';
-        else if (genderInput === '2') gender = 'female';
-        else if (genderInput === '3') gender = 'unknown';
-        else return;
-        const affected = confirm('Is this child affected by the condition?');
-
-        // Ask if biological or adopted
-        const childType = prompt('Is the child biological or adopted?\n1 = Biological\n2 = Adopted', '1');
-        let adoptedType = null;
-        if (childType === '2') {
-            adoptedType = prompt('Is the child adopted into the family or out of the family?\n1 = Adopted In\n2 = Adopted Out', '1');
-        }
-
-        const parentIds = [parent1.id, parent2.id].sort();
-
-        const generation = Math.min(5, parent1.generation + 1);
-        // Find next available position in this generation
-        const individualsInGen = this.pedigreeData.individuals.filter(ind => ind.generation === generation);
-        const nextPos = individualsInGen.length ? Math.max(...individualsInGen.map(i => i.position || 0)) + 1 : 1;
-
-        const child = this.createNewIndividual({
-            name, gender, affected,
-            generation,
-            position: nextPos,
-            parentIds
-        });
-
-        // Mark adopted status
-        if (childType === '2') {
-            child.isAdopted = true;
-            if (adoptedType === '1') {
-                child.adoptedDirection = 'in';
-            } else if (adoptedType === '2') {
-                child.adoptedDirection = 'out';
-            }
-        }
-
-        this.pedigreeData.individuals.push(child);
-        parent1.childrenIds = parent1.childrenIds || [];
-        parent1.childrenIds.push(child.id);
-        parent2.childrenIds = parent2.childrenIds || [];
-        parent2.childrenIds.push(child.id);
-
-        this.autoLayout();
-        this.calculateAllRisks();
-        this.renderPedigree();
-        if (this.selectedIndividual) this.selectIndividual(this.selectedIndividual.id);
-        alert(`Child ${name} added successfully!`);
     }
 
     //editIndividual to populate marital status ---
@@ -1111,30 +985,6 @@ class MedicalPedigreeAnalyzer {
                         placed.add(spouse.id);
                     } else {
                         child.x = marriageMidX;
-                        child.y = this.generationY[generation - 1];
-                        ordered.push(child);
-                        placed.add(child.id);
-                    }
-                    return;
-                }
-            }
-
-            // --- FIX: Special case: single child with one parent and spouse ---
-            if (group.members.length === 1 && group.parentIds.length === 1) {
-                const parent = this.getIndividualById(group.parentIds[0]);
-                const child = group.members[0];
-                const spouse = child.spouseId ? individuals.find(i => i.id === child.spouseId) : null;
-                if (parent && typeof parent.x === 'number') {
-                    if (spouse) {
-                        // Space child and spouse apart, centered under the single parent
-                        child.x = parent.x - spacing / 2;
-                        spouse.x = parent.x + spacing / 2;
-                        child.y = spouse.y = this.generationY[generation - 1];
-                        ordered.push(child, spouse);
-                        placed.add(child.id);
-                        placed.add(spouse.id);
-                    } else {
-                        child.x = parent.x;
                         child.y = this.generationY[generation - 1];
                         ordered.push(child);
                         placed.add(child.id);
@@ -1330,7 +1180,6 @@ class MedicalPedigreeAnalyzer {
                 b._paired = true;
             }
         });
-
 
         // Standard placement for other sibling groups
         if (!handledSingleChild) {
@@ -1568,10 +1417,7 @@ class MedicalPedigreeAnalyzer {
                     stroke: 'var(--color-text)', 'stroke-width': 2
                 };
                 if (ind.adoptedDirection === 'in') {
-                    g.appendChild(this.createSvgElement('line', {
-                        x1: ind.x, y1: ind.y - 38, x2: ind.x, y2: ind.y - 22,
-                        stroke: 'var(--color-text)', 'stroke-width': 2, 'stroke-dasharray': '4,4'
-                    }));
+                    lineAttrs['stroke-dasharray'] = '4,4';
                 }
                 g.appendChild(this.createSvgElement('line', lineAttrs));
             }
@@ -1823,37 +1669,17 @@ class MedicalPedigreeAnalyzer {
         return { carrier: 'Carrier Risk', affected: 'Affected Risk', offspring_affected: 'Offspring Affected Risk', offspring_carrier: 'Offspring Carrier Risk' }[type] || type;
     }
 
-    calculateAllRisks() {
-
-        this.pedigreeData.individuals.forEach(ind => {
-            ind.calculatedRisks = this.calculateIndividualRisk(ind);
-        });
-        // console.log('ind.calculatedRisks after calculation:', this.pedigreeData.individuals.map(i => ({ id: i.id, risks: i.calculatedRisks })));
-    }
+    calculateAllRisks() { this.pedigreeData.individuals.forEach(ind => ind.calculatedRisks = this.calculateIndividualRisk(ind)); }
 
     calculateIndividualRisk(ind) {
         const { inheritancePattern: pattern, carrierFrequency: freq } = this.pedigreeData;
-
-        if (!ind.isAdopted) {
-            if (pattern === 'autosomal_dominant') {
-                return this.calculateAutosomalDominantRisk(ind);
-            } else if (pattern === 'autosomal_recessive') {
-                return this.calculateAutosomalRecessiveRisk(ind, freq);
-            } else if (pattern === 'x_linked') {
-                return this.calculateXLinkedRisk(ind);
-            }
-            return {};
-        }
-        else {
-            return 0;
-        }
+        return pattern === 'autosomal_dominant' ? this.calculateAutosmalDominantRisk(ind) :
+            pattern === 'autosomal_recessive' ? this.calculateAutosmalRecessiveRisk(ind, freq) :
+                pattern === 'x_linked' ? this.calculateXLinkedRisk(ind) : {};
     }
 
-    calculateAutosomalDominantRisk(ind) {
+    calculateAutosmalDominantRisk(ind) {
         const risks = {};
-
-        console.log('ind.isAdopted in autosomal dominant:', ind.isAdopted);
-
         if (ind.testResult === 'positive' || ind.affected) {
             risks.affected = 100;
         } else if (ind.testResult === 'negative') {
@@ -1865,16 +1691,11 @@ class MedicalPedigreeAnalyzer {
         if (ind.affected || risks.affected === 100) {
             risks.offspring_affected = 50;
         }
-
         return risks;
     }
 
-    calculateAutosomalRecessiveRisk(ind, freq) {
+    calculateAutosmalRecessiveRisk(ind, freq) {
         const risks = {};
-
-        console.log('ind.isAdopted in autosomal recessive:', ind.isAdopted);
-
-        // Known states
         if (ind.testResult === 'positive' || ind.affected) {
             risks.affected = 100;
             risks.carrier = 100;
@@ -1891,22 +1712,20 @@ class MedicalPedigreeAnalyzer {
             return risks;
         }
 
-        // Infer from parents
-        const parents = ind.parentIds?.map(id => this.getIndividualById(id)).filter(p => p) || [];
+        const parents = ind.parentIds?.map(id => this.getIndividualById(id)).filter(p => p);
         const isParentAffected = parents.some(p => p.affected);
         const areBothParentsCarriers = parents.length === 2 && parents.every(p => this.isKnownCarrier(p));
 
         if (isParentAffected) {
             risks.carrier = 100;
         } else if (areBothParentsCarriers) {
-            risks.carrier = 66.7; // 2/3 chance of being carrier if unaffected
+            risks.carrier = 66.7; // 2/3 chance of being a carrier if phenotypically normal
             risks.affected = 25;
         } else {
-            // General population risk if no family history
+            // General population risk if no other information
             risks.carrier = 2 * Math.sqrt(freq) * (1 - Math.sqrt(freq)) * 100;
         }
 
-        // Offspring risks if this individual is a known carrier
         if (this.isKnownCarrier(ind)) {
             const spouse = this.getIndividualById(ind.spouseId);
             if (spouse) {
@@ -1914,9 +1733,8 @@ class MedicalPedigreeAnalyzer {
                     risks.offspring_affected = 25;
                     risks.offspring_carrier = 50;
                 } else {
-                    // Spouse risk from population
-                    const spouseCarrierProb = 2 * Math.sqrt(freq) * (1 - Math.sqrt(freq));
-                    risks.offspring_affected = spouseCarrierProb * 0.25 * 100;
+                    // Spouse risk is from general population
+                    risks.offspring_affected = (2 * Math.sqrt(freq) * (1 - Math.sqrt(freq))) * 0.25 * 100;
                 }
             }
         }
@@ -1924,13 +1742,15 @@ class MedicalPedigreeAnalyzer {
         return risks;
     }
 
+    isKnownCarrier(ind) {
+        if (!ind) return false;
+        return ind.carrier || ind.testResult === 'carrier' || ind.affected || (ind.calculatedRisks && ind.calculatedRisks.carrier === 100);
+    }
+
     calculateXLinkedRisk(ind) {
         const risks = {};
-
         const mother = this.getIndividualById(ind.parentIds?.find(id => this.getIndividualById(id)?.gender === 'female'));
         const father = this.getIndividualById(ind.parentIds?.find(id => this.getIndividualById(id)?.gender === 'male'));
-
-        console.log('ind.isAdopted in x-linked:', ind.isAdopted);
 
         if (ind.gender === 'male') {
             if (mother && (this.isKnownCarrier(mother) || mother.affected)) {
@@ -1943,20 +1763,132 @@ class MedicalPedigreeAnalyzer {
                 risks.carrier = 50;
             }
         }
-
         return risks;
     }
 
-    isKnownCarrier(ind) {
-        if (!ind) return false;
-        return ind.carrier || ind.testResult === 'carrier' || ind.affected ||
-            (ind.calculatedRisks && ind.calculatedRisks.carrier === 100);
+    getAffectedParents(ind) { return ind.parentIds?.map(id => this.getIndividualById(id)).filter(p => p?.affected).length || 0; }
+
+
+    addSibling() {
+        if (!this.selectedIndividual || !this.selectedIndividual.parentIds || this.selectedIndividual.parentIds.length === 0) {
+            alert("Cannot add a sibling to an individual without parents in the chart.");
+            return;
+        }
+        const name = prompt('Enter sibling name:');
+        if (!name) return;
+        const genderInput = prompt('Select sibling gender:\n1 = Male\n2 = Female\n3 = Unknown', '1');
+        let gender;
+        if (genderInput === '1') gender = 'male';
+        else if (genderInput === '2') gender = 'female';
+        else if (genderInput === '3') gender = 'unknown';
+        else return;
+        const affected = confirm('Is this sibling affected by the condition?');
+
+        // Ask if biological or adopted
+        const siblingType = prompt('Is the sibling biological or adopted?\n1 = Biological\n2 = Adopted', '1');
+        let adoptedType = null;
+        if (siblingType === '2') {
+            adoptedType = prompt('Is the sibling adopted into the family or out of the family?\n1 = Adopted In\n2 = Adopted Out', '1');
+        }
+
+        const sibling = this.createNewIndividual({
+            name, gender, affected,
+            generation: this.selectedIndividual.generation,
+            parentIds: [...this.selectedIndividual.parentIds]
+        });
+
+        // Mark adopted status
+        if (siblingType === '2') {
+            sibling.isAdopted = true;
+            if (adoptedType === '1') {
+                sibling.adoptedDirection = 'in';
+            } else if (adoptedType === '2') {
+                sibling.adoptedDirection = 'out';
+            }
+        }
+
+        // Lock position after creation
+
+        this.pedigreeData.individuals.push(sibling);
+        this.selectedIndividual.parentIds?.forEach(pid => {
+            const parent = this.getIndividualById(pid);
+            if (parent) {
+                parent.childrenIds = parent.childrenIds || [];
+                parent.childrenIds.push(sibling.id);
+            }
+        });
+
+        this.autoLayout();
+        this.calculateAllRisks();
+        this.renderPedigree();
+        if (this.selectedIndividual) this.selectIndividual(this.selectedIndividual.id);
+        alert(`Sibling ${name} added successfully!`);
     }
 
-    getAffectedParents(ind) {
-        return ind.parentIds?.map(id => this.getIndividualById(id)).filter(p => p?.affected).length || 0;
-    }
+    addChild() {
+        if (!this.selectedIndividual) return;
+        const parent1 = this.selectedIndividual;
+        const parent2 = this.getIndividualById(parent1.spouseId);
 
+        if (!parent2) {
+            alert(`${parent1.name} needs a spouse to add a child. Please add a spouse first.`);
+            return;
+        }
+
+        const name = prompt('Enter child name:');
+        if (!name) return;
+        // Prompt for gender: 1 = Male, 2 = Female, 3 = Unknown
+        const genderInput = prompt('Select child gender:\n1 = Male\n2 = Female\n3 = Unknown', '1');
+        let gender;
+        if (genderInput === '1') gender = 'male';
+        else if (genderInput === '2') gender = 'female';
+        else if (genderInput === '3') gender = 'unknown';
+        else return;
+        const affected = confirm('Is this child affected by the condition?');
+
+        // Ask if biological or adopted
+        const childType = prompt('Is the child biological or adopted?\n1 = Biological\n2 = Adopted', '1');
+        let adoptedType = null;
+        if (childType === '2') {
+            adoptedType = prompt('Is the child adopted into the family or out of the family?\n1 = Adopted In\n2 = Adopted Out', '1');
+        }
+
+        const parentIds = [parent1.id, parent2.id].sort();
+
+        const generation = Math.min(5, parent1.generation + 1);
+        // Find next available position in this generation
+        const individualsInGen = this.pedigreeData.individuals.filter(ind => ind.generation === generation);
+        const nextPos = individualsInGen.length ? Math.max(...individualsInGen.map(i => i.position || 0)) + 1 : 1;
+
+        const child = this.createNewIndividual({
+            name, gender, affected,
+            generation,
+            position: nextPos,
+            parentIds
+        });
+
+        // Mark adopted status
+        if (childType === '2') {
+            child.isAdopted = true;
+            if (adoptedType === '1') {
+                child.adoptedDirection = 'in';
+            } else if (adoptedType === '2') {
+                child.adoptedDirection = 'out';
+            }
+        }
+
+        this.pedigreeData.individuals.push(child);
+        parent1.childrenIds = parent1.childrenIds || [];
+        parent1.childrenIds.push(child.id);
+        parent2.childrenIds = parent2.childrenIds || [];
+        parent2.childrenIds.push(child.id);
+
+        this.autoLayout();
+        this.calculateAllRisks();
+        this.renderPedigree();
+        if (this.selectedIndividual) this.selectIndividual(this.selectedIndividual.id);
+        alert(`Child ${name} added successfully!`);
+    }
 
     createNewIndividual({ name, gender, affected, generation, position, spouseId, parentIds, childrenIds, remarks }) {
         const genRoman = this.toRoman(generation);
@@ -2327,6 +2259,13 @@ function getCookie(name) {
     return null;
 }
 
+// if (
+//     !window.location.pathname.endsWith('login.html') &&
+//     !window.location.pathname.endsWith('register.html') &&
+//     !getCookie('pedigree_analysis_tool_user')
+// ) {
+//     window.location.href = 'login.html';
+// }
 
 if (window.location.pathname.endsWith('login.html')) {
     const loginForm = document.getElementById('loginForm');

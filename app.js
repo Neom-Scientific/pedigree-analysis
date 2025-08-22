@@ -2327,6 +2327,13 @@ function getCookie(name) {
     return null;
 }
 
+if (
+    !window.location.pathname.endsWith('login.html') &&
+    !window.location.pathname.endsWith('register.html') &&
+    !getCookie('pedigree_analysis_tool_user')
+) {
+    window.location.href = 'login.html';
+}
 
 if (window.location.pathname.endsWith('login.html')) {
     const loginForm = document.getElementById('loginForm');

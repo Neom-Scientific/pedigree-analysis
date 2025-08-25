@@ -1074,8 +1074,9 @@ select.form-control {
 
 .individual-symbol {
   cursor: pointer;
-  /* transition: all var(--duration-fast) var(--ease-standard); */
   stroke-width: 2;
+  fill: var(--color-surface);
+  stroke: var(--color-text);
 }
 
 .individual-symbol:hover {
@@ -1088,6 +1089,12 @@ select.form-control {
   stroke: var(--color-primary);
   stroke-width: 4;
   filter: drop-shadow(0 0 6px var(--color-primary));
+}
+
+.individual-symbol.affected{
+  fill:var(--color-text);
+  /* stroke: var(--color-error); */
+  stroke-width: 2;
 }
 
 .individual-symbol.proband {

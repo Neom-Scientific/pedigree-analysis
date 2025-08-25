@@ -488,7 +488,7 @@
                         <select class="form-control" id="maritalStatusSelect">
                             <option value="married">Married</option>
                             <option value="divorced">Divorced</option>
-                            <option value="separated">Separated</option>
+                            <option value="consanguinity">Consanguinity</option>
                             <option value="unmarried">Unmarried</option>
                         </select>
                     </div>
@@ -546,6 +546,15 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+    <div id="exportPreviewModal"
+        style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:#fff; padding:32px; border-radius:12px; max-width:1200px; max-height:90vh; min-width:800px; min-height:600px; overflow:auto; position:relative;">
+            <button id="closePreviewBtn" style="position:absolute; top:8px; right:8px;">Close</button>
+            <div id="svgPreviewContainer"></div>
+            <button id="confirmExportBtn" style="margin-top:16px;">Export SVG</button>
         </div>
     </div>
 

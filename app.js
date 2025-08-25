@@ -81,6 +81,11 @@ class MedicalPedigreeAnalyzer {
         else if (genderInput === '2') gender = 'female';
         else return;
         const affected = confirm('Is the proband affected by the genetic condition?');
+        // const customeDialog = customConfirm('are you sure').then((result) => {
+        //     if(result) console.log('yes');
+        //     else console.log('no');
+        // });
+        // const a = confirm('Are you sure?');
         const proband = this.createNewIndividual({
             name,
             gender,
@@ -288,7 +293,7 @@ class MedicalPedigreeAnalyzer {
         }
 
         // Divorced double marriage: single line + two slashes
-        if (marriageInfo && marriageInfo.status === 'divorced' && marriageInfo.doubleLine) {
+        if (marriageInfo && marriageInfo.status === 'divorced') {
             // Single horizontal line
             const line = this.createSvgElement('line', { x1, y1: y, x2, y2: y, class: lineClass + ' marriage-line-double' });
             group.appendChild(line);
@@ -302,7 +307,7 @@ class MedicalPedigreeAnalyzer {
                 x1: midX + 2, y1: y - 8, x2: midX + 8, y2: y + 8,
                 class: 'marriage-line-slash'
             }));
-        } else if (marriageInfo && marriageInfo.doubleLine) {
+        } else if (marriageInfo && marriageInfo.status === 'consanguinity') {
             // Double horizontal lines (for consanguinity)
             const offset = 4;
             const line1 = this.createSvgElement('line', { x1, y1: y - offset, x2, y2: y - offset, class: lineClass + ' marriage-line-double' });
@@ -313,20 +318,7 @@ class MedicalPedigreeAnalyzer {
             // Single line (default)
             const line = this.createSvgElement('line', { x1, y1: y, x2, y2: y, class: lineClass });
             group.appendChild(line);
-            // (Optional) Draw single slash for separated/divorced (non-double)
-            if (
-                marriageInfo &&
-                (marriageInfo.status === 'divorced' || marriageInfo.status === 'separated') &&
-                !marriageInfo.doubleLine
-            ) {
-                const midX = (parseFloat(x1) + parseFloat(x2)) / 2;
-                const midY = y;
-                const slash = this.createSvgElement('line', {
-                    x1: midX - 8, y1: midY - 8, x2: midX + 8, y2: midY + 8,
-                    class: 'marriage-line-slash'
-                });
-                group.appendChild(slash);
-            }
+
         }
     }
 
@@ -595,64 +587,198 @@ class MedicalPedigreeAnalyzer {
     addParent() {
         if (!this.selectedIndividual) return;
         const child = this.selectedIndividual;
-        const existingParents = child.parentIds?.map(id => this.getIndividualById(id)).filter(Boolean) || [];
-
-        if (existingParents.length >= 2) {
+        if (child.parentIds && child.parentIds.length >= 2) {
             alert('This individual already has two parents.');
             return;
         }
 
-        const name = prompt('Enter parent name:');
-        if (!name) return;
+        // Prompt for parent names
+        const name1 = prompt('Enter first parent name:');
+        if (!name1) return;
+        const gender1 = prompt('Select first parent gender:\n1 = Male\n2 = Female', '1') === '1' ? 'male' : 'female';
+        const affected1 = confirm('Is the first parent affected by the condition?');
 
-        let gender;
-        if (existingParents.length === 1) {
-            gender = existingParents[0].gender === 'male' ? 'female' : 'male';
-            alert(`Adding ${name} as the ${gender}.`);
+        const name2 = prompt('Enter second parent name:');
+        if (!name2) return;
+        const gender2 = gender1 === 'male' ? 'female' : 'male';
+        alert(`Second parent will be ${gender2}.`);
+        const affected2 = confirm('Is the second parent affected by the condition?');
+
+        // Marital status
+        const statusNum = prompt('Enter marital status:\n1 = Married\n2 = Divorced\n3 = Consanguinity', '1');
+        let marriageInfo = { status: 'married' };
+        if (statusNum === '2') {
+            marriageInfo.status = 'divorced';
+            marriageInfo.doubleLine = true;
+        } else if (statusNum === '3') {
+            marriageInfo.status = 'consanguinity';
+            marriageInfo.doubleLine = true;
+        }
+
+        // Create parents
+        const gen = Math.max(1, child.generation - 1);
+
+        // Find next available positions for both parents in their generation
+        const individualsInGen = this.pedigreeData.individuals.filter(ind => ind.generation === gen);
+        const nextPos = individualsInGen.length ? Math.max(...individualsInGen.map(i => i.position || 0)) + 1 : 1;
+
+        const parent1 = this.createNewIndividual({
+            name: name1,
+            gender: gender1,
+            affected: affected1,
+            generation: gen,
+            position: nextPos,
+            childrenIds: [child.id]
+        });
+        const parent2 = this.createNewIndividual({
+            name: name2,
+            gender: gender2,
+            affected: affected2,
+            generation: gen,
+            position: nextPos + 1,
+            childrenIds: [child.id]
+        });
+
+        // Link as spouses
+        parent1.spouseId = parent2.id;
+        parent2.spouseId = parent1.id;
+        if (parent1.id < parent2.id) {
+            parent1.marriageInfo = marriageInfo;
         } else {
-            const genderInput = prompt('Select parent gender:\n1 = Male\n2 = Female', '1');
-            if (genderInput === '1') gender = 'male';
-            else if (genderInput === '2') gender = 'female';
-            else return;
+            parent2.marriageInfo = marriageInfo;
         }
 
-        const affected = confirm('Is this parent affected by the condition?');
-        const parent = this.createNewIndividual({ name, gender, affected, generation: Math.max(1, child.generation - 1), childrenIds: [child.id] });
+        // Add parents to data
+        this.pedigreeData.individuals.push(parent1, parent2);
 
-        this.pedigreeData.individuals.push(parent);
-        child.parentIds = child.parentIds || [];
-        child.parentIds.push(parent.id);
+        // Assign both parents to child
+        child.parentIds = [parent1.id, parent2.id];
 
-        if (existingParents.length === 1) {
-            const firstParent = existingParents[0];
-            firstParent.spouseId = parent.id;
-            parent.spouseId = firstParent.id;
-
-            // Ask for marital status by number
-            const statusNum = prompt('Enter marital status:\n1 = Married\n2 = Divorced\n3 = Consanguinity', '1');
-            let marriageInfo = { status: 'married' };
-            if (statusNum === '2') {
-                marriageInfo.status = 'divorced';
-                marriageInfo.doubleLine = true;
-            } else if (statusNum === '3') {
-                marriageInfo.status = 'consanguinity';
-                marriageInfo.doubleLine = true;
-            }
-            if (firstParent.id < parent.id) {
-                firstParent.marriageInfo = marriageInfo;
-            } else {
-                parent.marriageInfo = marriageInfo;
-            }
-
-            alert(`${parent.name} and ${firstParent.name} are now linked as spouses.`);
-        }
+        // Add child to both parents' childrenIds (already done above, but ensure no duplicates)
+        parent1.childrenIds = parent1.childrenIds || [];
+        parent2.childrenIds = parent2.childrenIds || [];
+        if (!parent1.childrenIds.includes(child.id)) parent1.childrenIds.push(child.id);
+        if (!parent2.childrenIds.includes(child.id)) parent2.childrenIds.push(child.id);
 
         this.autoLayout();
         this.calculateAllRisks();
         this.renderPedigree();
         if (this.selectedIndividual) this.selectIndividual(this.selectedIndividual.id);
-        alert(`Parent ${name} added successfully!`);
+        alert(`Parents ${name1} and ${name2} added successfully!`);
     }
+
+    // addParent() {
+    //     if (!this.selectedIndividual) return;
+    //     const child = this.selectedIndividual;
+    //     if (child.parentIds && child.parentIds.length >= 2) {
+    //         alert('This individual already has two parents.');
+    //         return;
+    //     }
+    
+    //     // Prompt for parent names
+    //     const name1 = prompt('Enter first parent name:');
+    //     if (!name1) return;
+    //     const gender1 = prompt('Select first parent gender:\n1 = Male\n2 = Female', '1') === '1' ? 'male' : 'female';
+    //     const affected1 = confirm('Is the first parent affected by the condition?');
+    
+    //     const name2 = prompt('Enter second parent name:');
+    //     if (!name2) return;
+    //     const gender2 = gender1 === 'male' ? 'female' : 'male';
+    //     alert(`Second parent will be ${gender2}.`);
+    //     const affected2 = confirm('Is the second parent affected by the condition?');
+    
+    //     // Marital status
+    //     const statusNum = prompt('Enter marital status:\n1 = Married\n2 = Divorced\n3 = Consanguinity', '1');
+    //     let marriageInfo = { status: 'married' };
+    //     if (statusNum === '2') {
+    //         marriageInfo.status = 'divorced';
+    //         marriageInfo.doubleLine = true;
+    //     } else if (statusNum === '3') {
+    //         marriageInfo.status = 'consanguinity';
+    //         marriageInfo.doubleLine = true;
+    //     }
+    
+    //     // Create parents
+    //     const gen = Math.max(1, child.generation - 1);
+    
+    //     // Find next available positions for both parents in their generation
+    //     const individualsInGen = this.pedigreeData.individuals.filter(ind => ind.generation === gen);
+    //     const nextPos = individualsInGen.length ? Math.max(...individualsInGen.map(i => i.position || 0)) + 1 : 1;
+    
+    //     const parent1 = this.createNewIndividual({
+    //         name: name1,
+    //         gender: gender1,
+    //         affected: affected1,
+    //         generation: gen,
+    //         position: nextPos,
+    //         childrenIds: [child.id]
+    //     });
+    //     const parent2 = this.createNewIndividual({
+    //         name: name2,
+    //         gender: gender2,
+    //         affected: affected2,
+    //         generation: gen,
+    //         position: nextPos + 1,
+    //         childrenIds: [child.id]
+    //     });
+    
+    //     // Link as spouses
+    //     parent1.spouseId = parent2.id;
+    //     parent2.spouseId = parent1.id;
+    //     if (parent1.id < parent2.id) {
+    //         parent1.marriageInfo = marriageInfo;
+    //     } else {
+    //         parent2.marriageInfo = marriageInfo;
+    //     }
+    
+    //     // Add parents to data
+    //     this.pedigreeData.individuals.push(parent1, parent2);
+    
+    //     // Assign both parents to child
+    //     child.parentIds = [parent1.id, parent2.id];
+    
+    //     // Add child to both parents' childrenIds (already done above, but ensure no duplicates)
+    //     parent1.childrenIds = parent1.childrenIds || [];
+    //     parent2.childrenIds = parent2.childrenIds || [];
+    //     if (!parent1.childrenIds.includes(child.id)) parent1.childrenIds.push(child.id);
+    //     if (!parent2.childrenIds.includes(child.id)) parent2.childrenIds.push(child.id);
+    
+    //     // --- SHIFT SUBTREE TO MAKE SPACE FOR NEW ANCESTORS ---
+    //     // 1. Place parents at a default distance apart, centered at child's current x
+    //     const parentSpacing = 120;
+    //     const parentY = this.generationY[gen - 1];
+    //     const childX = typeof child.x === 'number' ? child.x : 700;
+    //     parent1.x = childX - parentSpacing / 2;
+    //     parent2.x = childX + parentSpacing / 2;
+    //     parent1.y = parent2.y = parentY;
+    
+    //     // 2. Center child under new parents
+    //     child.x = (parent1.x + parent2.x) / 2;
+    
+    //     // 3. Recursively shift all descendants to keep them centered under their parents
+    //     const shiftDescendants = (ind) => {
+    //         if (!ind.childrenIds || !ind.childrenIds.length) return;
+    //         const children = ind.childrenIds.map(cid => this.getIndividualById(cid)).filter(Boolean);
+    //         if (!children.length) return;
+    //         // Center children under their parents' midpoint
+    //         const midX = (ind.x + (ind.spouseId ? this.getIndividualById(ind.spouseId)?.x || ind.x : ind.x)) / (ind.spouseId ? 2 : 1);
+    //         const totalWidth = (children.length - 1) * this.individualSpacing;
+    //         let startX = midX - totalWidth / 2;
+    //         children.forEach((child, idx) => {
+    //             child.x = startX + idx * this.individualSpacing;
+    //             child.y = this.generationY[child.generation - 1];
+    //             shiftDescendants(child);
+    //         });
+    //     };
+    //     shiftDescendants(parent1);
+    //     shiftDescendants(parent2);
+    
+    //     this.autoLayout();
+    //     this.calculateAllRisks();
+    //     this.renderPedigree();
+    //     if (this.selectedIndividual) this.selectIndividual(this.selectedIndividual.id);
+    //     alert(`Parents ${name1} and ${name2} added successfully!`);
+    // }
 
     addSpouse() {
         if (!this.selectedIndividual) return;
@@ -1194,7 +1320,7 @@ class MedicalPedigreeAnalyzer {
                     }
                 } else if (!placed.has(sib.id)) {
                     // Non-twin or already placed twin
-                    // Place leftmost sibling's spouse (if any)
+                    // Place leftmost sibling's spouse (if any)s
                     if (idx === 0) {
                         const leftSpouse = sib.spouseId ? individuals.find(i => i.id === sib.spouseId) : null;
                         if (
@@ -1296,40 +1422,42 @@ class MedicalPedigreeAnalyzer {
             }
         });
 
-        spousePairs.forEach(([a, b]) => {
-            // Find both sets of parents
-            const aParents = a.parentIds.map(pid => this.getIndividualById(pid)).filter(Boolean);
-            const bParents = b.parentIds.map(pid => this.getIndividualById(pid)).filter(Boolean);
+        // spousePairs.forEach(([a, b]) => {
+        //     // Find both sets of parents
+        //     const aParents = a.parentIds.map(pid => this.getIndividualById(pid)).filter(Boolean);
+        //     const bParents = b.parentIds.map(pid => this.getIndividualById(pid)).filter(Boolean);
 
-            // --- Only if both are the ONLY child of their parents ---
-            const aSiblings = individuals.filter(i =>
-                Array.isArray(i.parentIds) &&
-                i.parentIds.length === a.parentIds.length &&
-                i.parentIds.every((pid, idx) => pid === a.parentIds[idx])
-            );
-            const bSiblings = individuals.filter(i =>
-                Array.isArray(i.parentIds) &&
-                i.parentIds.length === b.parentIds.length &&
-                i.parentIds.every((pid, idx) => pid === b.parentIds[idx])
-            );
+        //     // --- Only if both are the ONLY child of their parents ---
+        //     const aSiblings = individuals.filter(i =>
+        //         Array.isArray(i.parentIds) &&
+        //         i.parentIds.length === a.parentIds.length &&
+        //         i.parentIds.every((pid, idx) => pid === a.parentIds[idx])
+        //     );
+        //     const bSiblings = individuals.filter(i =>
+        //         Array.isArray(i.parentIds) &&
+        //         i.parentIds.length === b.parentIds.length &&
+        //         i.parentIds.every((pid, idx) => pid === b.parentIds[idx])
+        //     );
 
-            if (
-                aParents.length === 2 && bParents.length === 2 &&
-                aParents.every(p => typeof p.x === 'number') &&
-                bParents.every(p => typeof p.x === 'number') &&
-                aSiblings.length === 1 && bSiblings.length === 1 // <-- Only child for both
-            ) {
-                const aMid = (aParents[0].x + aParents[1].x) / 2;
-                const bMid = (bParents[0].x + bParents[1].x) / 2;
-                const pairMid = (aMid + bMid) / 2;
-                const bigSpacing = this.individualSpacing * 2;
-                a.x = pairMid - bigSpacing / 2;
-                b.x = pairMid + bigSpacing / 2;
-                a.y = b.y = this.generationY[generation - 1];
-                a._paired = true;
-                b._paired = true;
-            }
-        });
+        //     if (
+        //         aParents.length === 2 && bParents.length === 2 &&
+        //         aParents.every(p => typeof p.x === 'number') &&
+        //         bParents.every(p => typeof p.x === 'number') &&
+        //         aSiblings.length === 1 && bSiblings.length === 1 // <-- Only child for both
+        //     ) {
+        //         const aMid = (aParents[0].x + aParents[1].x) / 2;
+        //         const bMid = (bParents[0].x + bParents[1].x) / 2;
+        //         const pairMid = (aMid + bMid) / 2;
+        //         const bigSpacing = this.individualSpacing * 2;
+        //         a.x = pairMid - bigSpacing / 2;
+        //         b.x = pairMid + bigSpacing / 2;
+        //         a.y = b.y = this.generationY[generation - 1];
+        //         a._paired = true;
+        //         b._paired = true;
+        //     }
+        // });
+
+
 
 
         // Standard placement for other sibling groups
@@ -1434,6 +1562,7 @@ class MedicalPedigreeAnalyzer {
                 });
             });
 
+
             // 4. Layout singles (no parents) — put them after groups
             if (groupLayouts.length === 0) {
                 // No sibling groups: center singles in the generation
@@ -1469,52 +1598,260 @@ class MedicalPedigreeAnalyzer {
             }
 
         }
-        individuals.forEach(ind => {
-            // if (ind._paired) return;
+
+        // individuals.forEach(ind => {
+        //     // if (ind._paired) return;
+        //     if (
+        //         ind.spouseId &&
+        //         ind.id < ind.spouseId // Only process one direction
+        //     ) {
+        //         const spouse = individuals.find(i => i.id === ind.spouseId);
+        //         if (
+        //             spouse &&
+        //             Array.isArray(ind.parentIds) && ind.parentIds.length > 0 &&
+        //             Array.isArray(spouse.parentIds) && spouse.parentIds.length > 0
+        //         ) {
+        //             // Only center if both are the ONLY child of their parents
+        //             const aSiblings = individuals.filter(i =>
+        //                 Array.isArray(i.parentIds) &&
+        //                 i.parentIds.length === ind.parentIds.length &&
+        //                 i.parentIds.every((pid, idx) => pid === ind.parentIds[idx])
+        //             );
+        //             const bSiblings = individuals.filter(i =>
+        //                 Array.isArray(i.parentIds) &&
+        //                 i.parentIds.length === spouse.parentIds.length &&
+        //                 i.parentIds.every((pid, idx) => pid === spouse.parentIds[idx])
+        //             );
+        //             if (aSiblings.length === 1 && bSiblings.length === 1) {
+        //                 const aParents = ind.parentIds.map(pid => this.getIndividualById(pid)).filter(Boolean);
+        //                 const bParents = spouse.parentIds.map(pid => this.getIndividualById(pid)).filter(Boolean);
+        //                 if (
+        //                     aParents.length && bParents.length &&
+        //                     aParents.every(p => typeof p.x === 'number') &&
+        //                     bParents.every(p => typeof p.x === 'number')
+        //                 ) {
+        //                     const aMid = aParents.length === 2 ? ((aParents[0].x + aParents[1].x) / 2) : aParents[0].x;
+        //                     const bMid = bParents.length === 2 ? ((bParents[0].x + bParents[1].x) / 2) : bParents[0].x;
+        //                     const pairMid = (aMid + bMid) / 2;
+        //                     const spacing = this.individualSpacing;
+        //                     if (aParents.length === 2 && bParents.length === 2) {
+        //                         ind.x = (pairMid - spacing / 2) - 70;
+        //                         spouse.x = (pairMid + spacing / 2) + 70;
+        //                     }
+        //                     if (aParents.length === 1 && bParents.length === 1) {
+        //                         ind.x = pairMid - spacing / 2;
+        //                         spouse.x = pairMid + spacing / 2;
+        //                     }
+        //                     else if (
+        //                         (aParents.length === 1 && bParents.length === 2) ||
+        //                         (aParents.length === 2 && bParents.length === 1)
+        //                     ) {
+        //                         ind.x = (pairMid - spacing / 2) - 35;
+        //                         spouse.x = (pairMid + spacing / 2) + 35;
+        //                     }
+        //                     ind.y = spouse.y = this.generationY[generation - 1];
+        //                 }
+        //             }
+        //         }
+        //     }
+        // });
+
+        spousePairs.forEach(([a, b]) => {
+            // Find both sets of parents
+            const aParents = a.parentIds.map(pid => this.getIndividualById(pid)).filter(Boolean);
+            const bParents = b.parentIds.map(pid => this.getIndividualById(pid)).filter(Boolean);
+
+            // Find both sets of grandparents
+            const aGrandParents = aParents.flatMap(p => p.parentIds || []).map(pid => this.getIndividualById(pid)).filter(Boolean);
+            const bGrandParents = bParents.flatMap(p => p.parentIds || []).map(pid => this.getIndividualById(pid)).filter(Boolean);
+
+            // --- Only if both are the ONLY child of their parents ---
+            const aSiblings = individuals.filter(i =>
+                Array.isArray(i.parentIds) &&
+                i.parentIds.length === a.parentIds.length &&
+                i.parentIds.every((pid, idx) => pid === a.parentIds[idx])
+            );
+            const bSiblings = individuals.filter(i =>
+                Array.isArray(i.parentIds) &&
+                i.parentIds.length === b.parentIds.length &&
+                i.parentIds.every((pid, idx) => pid === b.parentIds[idx])
+            );
+
+            let aMid, bMid;
+
+            // Fallback if no parents/grandparents
+            if (typeof aMid !== 'number') aMid = 700;
+            if (typeof bMid !== 'number') bMid = 700;
+
+            const pairMid = (aMid + bMid) / 2;
+            const spacing = this.individualSpacing;
+
             if (
-                ind.spouseId &&
-                ind.id < ind.spouseId // Only process one direction
+                aParents.length > 0 && bParents.length > 0 &&
+                aParents.every(p => typeof p.x === 'number') &&
+                bParents.every(p => typeof p.x === 'number')
             ) {
-                const spouse = individuals.find(i => i.id === ind.spouseId);
-                if (
-                    spouse &&
-                    Array.isArray(ind.parentIds) && ind.parentIds.length > 0 &&
-                    Array.isArray(spouse.parentIds) && spouse.parentIds.length > 0
-                ) {
-                    // Both have parents, center the pair between both sets of parents
-                    const aParents = ind.parentIds.map(pid => this.getIndividualById(pid)).filter(Boolean);
-                    const bParents = spouse.parentIds.map(pid => this.getIndividualById(pid)).filter(Boolean);
-                    if (
-                        aParents.length && bParents.length &&
-                        aParents.every(p => typeof p.x === 'number') &&
-                        bParents.every(p => typeof p.x === 'number')
-                    ) {
-                        const aMid = aParents.length === 2 ? ((aParents[0].x + aParents[1].x) / 2) : aParents[0].x;
-                        const bMid = bParents.length === 2 ? ((bParents[0].x + bParents[1].x) / 2) : bParents[0].x;
-                        console.log('a.parents.length', aParents.length);
-                        console.log('b.parents.length', bParents.length);
-                        console.log('aMid', aMid, 'bMid', bMid);
-                        const pairMid = (aMid + bMid) / 2;
-                        const spacing = this.individualSpacing;
-                        if (aParents.length === 2 && bParents.length === 2) {
-                            ind.x = (pairMid - spacing / 2) - 70;
-                            spouse.x = (pairMid + spacing / 2) + 70;
+
+                // if (aGrandParents.length >= 1 && aParents.length === 2) {
+                //     let gpMid;
+                //     if (
+                //         aGrandParents.length === 2 &&
+                //         typeof aGrandParents[0].x === 'number' &&
+                //         typeof aGrandParents[1].x === 'number'
+                //     ) {
+                //         gpMid = (aGrandParents[0].x + aGrandParents[1].x) / 2;
+                //     } else if (aGrandParents.length === 1 && typeof aGrandParents[0].x === 'number') {
+                //         gpMid = aGrandParents[0].x;
+                //     }
+
+                //     const parentDistance = 150; // distance between parents
+                //     const gpDistance = 200;     // distance between grandparents
+
+                //     if (typeof gpMid === 'number') {
+                //         // Position grandparents symmetrically
+                //         if (aGrandParents[0]) aGrandParents[0]._desiredX = gpMid - gpDistance / 2;
+                //         if (aGrandParents[1]) aGrandParents[1]._desiredX = gpMid + gpDistance / 2;
+
+                //         // Position parents centered under grandparents
+                //         if (aParents[0]) aParents[0]._desiredX = gpMid - parentDistance / 2;
+                //         if (aParents[1]) aParents[1]._desiredX = gpMid + parentDistance / 2;
+
+                //         // Position children (a and b) centered under parents
+                //         const childDistance = spacing + 60; // extra gap for spouses
+                //         a.x = gpMid - childDistance / 2;
+                //         b.x = gpMid + childDistance / 2;
+                //     }
+                // }
+
+                if (aSiblings.length === 1 && bSiblings.length === 1) {
+                    if (aParents.length === 2 && bParents.length === 2) {
+                        a.x = (pairMid - spacing / 2) - 70;
+                        b.x = (pairMid + spacing / 2) + 70;
+                        if (aGrandParents.length >= 1 && aParents.length === 2) {
+                            // Spread a's parents around the midpoint of their own parents (the grandparents)
+                            let gpMid;
+                            if (aGrandParents.length === 2 && typeof aGrandParents[0].x === 'number' && typeof aGrandParents[1].x === 'number') {
+                                gpMid = (aGrandParents[0].x + aGrandParents[1].x) / 2;
+                            } else if (aGrandParents.length === 1 && typeof aGrandParents[0].x === 'number') {
+                                gpMid = aGrandParents[0].x;
+                            }
+                            const parentDistance = 120;
+                            if (typeof gpMid === 'number') {
+                                if (aGrandParents[0]) aGrandParents[0]._desiredX = (gpMid - parentDistance / 2) - 250;
+                                if (aGrandParents[1]) aGrandParents[1]._desiredX = (gpMid + parentDistance / 2) - 200;
+                                if (aParents[0]) aParents[0]._desiredX = (gpMid - parentDistance / 2) - 165;
+                                if (aParents[1]) aParents[1]._desiredX = (gpMid + parentDistance / 2) - 150;
+                                a.x = (gpMid - spacing / 2) + 140;
+                                b.x = (gpMid + spacing / 2) + 300;
+                            }
                         }
-                        if (aParents.length === 1 && bParents.length === 1) {
-                            ind.x = pairMid - spacing / 2;
-                            spouse.x = pairMid + spacing / 2;
-                        }
-                        else if (aParents.length === 1 && bParents.length === 2 || aParents.length === 2 && bParents.length === 1) {
-                            ind.x = (pairMid - spacing / 2) - 35;
-                            spouse.x = (pairMid + spacing / 2) + 35;
-                        }
-                        ind.y = spouse.y = this.generationY[generation - 1];
+                    }
+                    else if (aParents.length === 1 && bParents.length === 1) {
+                        a.x = (pairMid - spacing / 2);
+                        b.x = (pairMid + spacing / 2);
+                    }
+                    else if (aParents.length === 1 && bParents.length === 2) {
+                        a.x = (pairMid - spacing / 2) - 35;
+                        b.x = (pairMid + spacing / 2) + 30;
+                    }
+                    else if (aParents.length === 2 && bParents.length === 1) {
+                        a.x = (pairMid - spacing / 2) - 30;
+                        b.x = (pairMid + spacing / 2) + 35;
                     }
                 }
+                else {
+                    // --- Improved logic: Sibling placement ---
+                    // Find siblings (excluding a and b themselves)
+                    const aSibs = aSiblings.filter(s => s.id !== a.id);
+                    const bSibs = bSiblings.filter(s => s.id !== b.id);
+                    if (aGrandParents.length >= 1 && aParents.length === 2) {
+
+                        // Spread a's parents around the midpoint of their own parents (the grandparents)
+                        let gpMid;
+                        if (aGrandParents.length === 2 && typeof aGrandParents[0].x === 'number' && typeof aGrandParents[1].x === 'number') {
+                            gpMid = (aGrandParents[0].x + aGrandParents[1].x) / 2;
+                        } else if (aGrandParents.length === 1 && typeof aGrandParents[0].x === 'number') {
+                            gpMid = aGrandParents[0].x;
+                        }
+                        const parentDistance = 120;
+                        if (typeof gpMid === 'number') {
+                            if (aGrandParents[0]) aGrandParents[0]._desiredX = (gpMid - parentDistance / 2) + 250;
+                            if (aGrandParents[1]) aGrandParents[1]._desiredX = (gpMid + parentDistance / 2) + 300;
+                            if (aParents[0]) aParents[0]._desiredX = (gpMid - parentDistance / 2) + 300;
+                            if (aParents[1]) aParents[1]._desiredX = (gpMid + parentDistance / 2) + 350;
+                            // a.x = (gpMid - spacing / 2) + 140;
+                            // b.x = (gpMid + spacing / 2) + 300;
+                        }
+                    }
+
+                    // Find midpoint between parents
+                    let aMid = aParents.length === 2 ? ((aParents[0].x + aParents[1].x) / 2) : aParents[0].x;
+                    let bMid = bParents.length === 2 ? ((bParents[0].x + bParents[1].x) / 2) : bParents[0].x;
+                    let pairMid = (aMid + bMid) / 2;
+                    const spacing = this.individualSpacing;
+
+                    // Total number of individuals in the row: b's siblings + a + b + a's siblings
+                    const total = bSibs.length + 2 + aSibs.length;
+                    // Start X so that the couple is always centered at pairMid
+                    let startX = pairMid - ((total - 1) / 2) * spacing;
+
+                    // Place a's siblings (left side), with their spouses immediately after
+                    let currIdx = 0;
+                    aSibs.forEach((sib) => {
+                        console.log('sib', sib)
+                        sib.x = startX + currIdx * spacing;
+                        sib.y = this.generationY[generation - 1];
+                        currIdx++;
+                        // Place spouse immediately after, if any and not already placed and not in aSibs/bSibs
+                        if (sib.spouseId) {
+                            const spouse = individuals.find(i => i.id === sib.spouseId);
+                            // Only place if spouse is not in aSibs, bSibs, a, or b
+                            if (spouse) {
+                                spouse.x = startX + currIdx * spacing;
+                                spouse.y = this.generationY[generation - 1];
+                                currIdx++;
+                            }
+                        }
+                    });
+
+                    // Place a (just after a's siblings and their spouses)
+                    a.x = startX + currIdx * spacing;
+                    a.y = this.generationY[generation - 1];
+                    currIdx++;
+
+                    // Place b (just after a)
+                    b.x = startX + currIdx * spacing;
+                    b.y = this.generationY[generation - 1];
+                    currIdx++;
+
+                    // Place b's siblings (right side), with their spouses immediately after
+                    bSibs.forEach((sib) => {
+                        sib.x = startX + currIdx * spacing;
+                        sib.y = this.generationY[generation - 1];
+                        currIdx++;
+                        // Place spouse immediately after, if any and not already placed
+                        if (sib.spouseId) {
+                            const spouse = individuals.find(i => i.id === sib.spouseId);
+                            if (spouse) {
+                                spouse.x = startX + currIdx * spacing;
+                                spouse.y = this.generationY[generation - 1];
+                                currIdx++;
+                            }
+                        }
+                    });
+                }
+                a.y = b.y = this.generationY[generation - 1];
+                a._paired = true;
+                b._paired = true;
             }
         });
 
+
         individuals.forEach(ind => {
+            if (typeof ind._desiredX === 'number') {
+                ind.x = ind._desiredX;
+                delete ind._desiredX;
+            }
             if (typeof ind.x !== 'number' || isNaN(ind.x)) {
                 ind.x = 700; // or your centerX
             }
@@ -1537,7 +1874,7 @@ class MedicalPedigreeAnalyzer {
         }
         if (ind.calculatedRisks && Object.keys(ind.calculatedRisks).length) {
             const mainRisk = Math.max(...Object.values(ind.calculatedRisks).filter(r => r > 0)) || 0;
-            if (mainRisk > 0) g.appendChild(this.createSvgElement('text', { x: ind.x, y: ind.y - 35, class: 'individual-text risk-percentage' }, `${mainRisk.toFixed(0)}% risk`));
+            // if (mainRisk > 0) g.appendChild(this.createSvgElement('text', { x: ind.x, y: ind.y - 35, class: 'individual-text risk-percentage' }, `${mainRisk.toFixed(0)}% risk`));
         }
 
         group.appendChild(g);
@@ -1828,7 +2165,6 @@ class MedicalPedigreeAnalyzer {
         this.pedigreeData.individuals.forEach(ind => {
             ind.calculatedRisks = this.calculateIndividualRisk(ind);
         });
-        // console.log('ind.calculatedRisks after calculation:', this.pedigreeData.individuals.map(i => ({ id: i.id, risks: i.calculatedRisks })));
     }
 
     calculateIndividualRisk(ind) {
@@ -1852,7 +2188,6 @@ class MedicalPedigreeAnalyzer {
     calculateAutosomalDominantRisk(ind) {
         const risks = {};
 
-        console.log('ind.isAdopted in autosomal dominant:', ind.isAdopted);
 
         if (ind.testResult === 'positive' || ind.affected) {
             risks.affected = 100;
@@ -1871,8 +2206,6 @@ class MedicalPedigreeAnalyzer {
 
     calculateAutosomalRecessiveRisk(ind, freq) {
         const risks = {};
-
-        console.log('ind.isAdopted in autosomal recessive:', ind.isAdopted);
 
         // Known states
         if (ind.testResult === 'positive' || ind.affected) {
@@ -1929,8 +2262,6 @@ class MedicalPedigreeAnalyzer {
 
         const mother = this.getIndividualById(ind.parentIds?.find(id => this.getIndividualById(id)?.gender === 'female'));
         const father = this.getIndividualById(ind.parentIds?.find(id => this.getIndividualById(id)?.gender === 'male'));
-
-        console.log('ind.isAdopted in x-linked:', ind.isAdopted);
 
         if (ind.gender === 'male') {
             if (mother && (this.isKnownCarrier(mother) || mother.affected)) {
@@ -2062,60 +2393,100 @@ class MedicalPedigreeAnalyzer {
 
     cancelEditInfo() { if (this.selectedIndividual) this.showIndividualInfo(this.selectedIndividual); }
 
+    // deleteIndividual() {
+    //     if (!this.selectedIndividual) return;
+    //     if (this.selectedIndividual.id === this.pedigreeData.probandId) {
+    //         alert('Cannot delete the proband. To delete this individual, please assign a new proband first.');
+    //         return;
+    //     }
+    //     if (
+    //         this.selectedIndividual.parentIds &&
+    //         this.selectedIndividual.parentIds.length === 2
+    //     ) {
+    //         const [parentId1, parentId2] = this.selectedIndividual.parentIds;
+    //         const parent1 = this.getIndividualById(parentId1);
+    //         const parent2 = this.getIndividualById(parentId2);
+
+    //         if (parent1 && parent2) {
+    //             if (confirm(`This individual has two parents (${parent1.name} and ${parent2.name}).\nDo you also want to delete both parents? This cannot be undone.`)) {
+    //                 // --- First, update all references to these parents ---
+    //                 // Remove child from parents' childrenIds (if still present)
+    //                 [parent1, parent2].forEach(parent => {
+    //                     if (parent && parent.childrenIds) {
+    //                         parent.childrenIds = parent.childrenIds.filter(cid => cid !== this.selectedIndividual.id);
+    //                     }
+    //                 });
+
+    //                 // Remove spouse link between parents
+    //                 if (parent1.spouseId === parent2.id) parent1.spouseId = null;
+    //                 if (parent2.spouseId === parent1.id) parent2.spouseId = null;
+
+    //                 // Remove parents from all other individuals' parentIds and spouseId
+    //                 this.pedigreeData.individuals.forEach(ind => {
+    //                     if (ind.parentIds) ind.parentIds = ind.parentIds.filter(pid => pid !== parentId1 && pid !== parentId2);
+    //                     if (ind.spouseId === parentId1 || ind.spouseId === parentId2) ind.spouseId = null;
+    //                     if (ind.childrenIds) ind.childrenIds = ind.childrenIds.filter(cid => cid !== parentId1 && cid !== parentId2);
+    //                 });
+
+    //                 // Remove parents from child's parentIds
+    //                 this.selectedIndividual.parentIds = [];
+
+    //                 // --- Now, remove parents from individuals array ---
+    //                 this.pedigreeData.individuals = this.pedigreeData.individuals.filter(ind => ind.id !== parentId1 && ind.id !== parentId2);
+    //             }
+    //         }
+    //     }
+    //     if (confirm(`Are you sure you want to delete ${this.selectedIndividual.name}? This cannot be undone.`)) {
+    //         const idToDelete = this.selectedIndividual.id;
+    //         this.pedigreeData.individuals = this.pedigreeData.individuals.filter(ind => ind.id !== idToDelete);
+    //         this.pedigreeData.individuals.forEach(ind => {
+    //             if (ind.spouseId === idToDelete) ind.spouseId = null;
+    //             if (ind.parentIds) ind.parentIds = ind.parentIds.filter(pid => pid !== idToDelete);
+    //             if (ind.childrenIds) ind.childrenIds = ind.childrenIds.filter(cid => cid !== idToDelete);
+    //         });
+    //         this.closeInfoPanel();
+    //         this.renderPedigree();
+    //     }
+    // }
+
     deleteIndividual() {
         if (!this.selectedIndividual) return;
         if (this.selectedIndividual.id === this.pedigreeData.probandId) {
             alert('Cannot delete the proband. To delete this individual, please assign a new proband first.');
             return;
         }
-        if (
-            this.selectedIndividual.parentIds &&
-            this.selectedIndividual.parentIds.length === 2
-        ) {
-            const [parentId1, parentId2] = this.selectedIndividual.parentIds;
-            const parent1 = this.getIndividualById(parentId1);
-            const parent2 = this.getIndividualById(parentId2);
 
-            if (parent1 && parent2) {
-                if (confirm(`This individual has two parents (${parent1.name} and ${parent2.name}).\nDo you also want to delete both parents? This cannot be undone.`)) {
-                    // --- First, update all references to these parents ---
-                    // Remove child from parents' childrenIds (if still present)
-                    [parent1, parent2].forEach(parent => {
-                        if (parent && parent.childrenIds) {
-                            parent.childrenIds = parent.childrenIds.filter(cid => cid !== this.selectedIndividual.id);
-                        }
-                    });
-
-                    // Remove spouse link between parents
-                    if (parent1.spouseId === parent2.id) parent1.spouseId = null;
-                    if (parent2.spouseId === parent1.id) parent2.spouseId = null;
-
-                    // Remove parents from all other individuals' parentIds and spouseId
-                    this.pedigreeData.individuals.forEach(ind => {
-                        if (ind.parentIds) ind.parentIds = ind.parentIds.filter(pid => pid !== parentId1 && pid !== parentId2);
-                        if (ind.spouseId === parentId1 || ind.spouseId === parentId2) ind.spouseId = null;
-                        if (ind.childrenIds) ind.childrenIds = ind.childrenIds.filter(cid => cid !== parentId1 && cid !== parentId2);
-                    });
-
-                    // Remove parents from child's parentIds
-                    this.selectedIndividual.parentIds = [];
-
-                    // --- Now, remove parents from individuals array ---
-                    this.pedigreeData.individuals = this.pedigreeData.individuals.filter(ind => ind.id !== parentId1 && ind.id !== parentId2);
-                }
-            }
+        // Check for spouse
+        let spouse = null;
+        if (this.selectedIndividual.spouseId) {
+            spouse = this.getIndividualById(this.selectedIndividual.spouseId);
         }
-        if (confirm(`Are you sure you want to delete ${this.selectedIndividual.name}? This cannot be undone.`)) {
-            const idToDelete = this.selectedIndividual.id;
-            this.pedigreeData.individuals = this.pedigreeData.individuals.filter(ind => ind.id !== idToDelete);
-            this.pedigreeData.individuals.forEach(ind => {
-                if (ind.spouseId === idToDelete) ind.spouseId = null;
-                if (ind.parentIds) ind.parentIds = ind.parentIds.filter(pid => pid !== idToDelete);
-                if (ind.childrenIds) ind.childrenIds = ind.childrenIds.filter(cid => cid !== idToDelete);
-            });
-            this.closeInfoPanel();
-            this.renderPedigree();
+
+        let msg = `Are you sure you want to delete ${this.selectedIndividual.name}?`;
+        if (spouse) {
+            msg += `\nThis will also delete their spouse (${spouse.name}).`;
         }
+        msg += ' This cannot be undone.';
+
+        if (!confirm(msg)) return;
+
+        // Collect IDs to delete
+        const idsToDelete = [this.selectedIndividual.id];
+        if (spouse) idsToDelete.push(spouse.id);
+
+        // Remove from individuals array
+        this.pedigreeData.individuals = this.pedigreeData.individuals.filter(ind => !idsToDelete.includes(ind.id));
+
+        // Remove all references
+        this.pedigreeData.individuals.forEach(ind => {
+            if (idsToDelete.includes(ind.spouseId)) ind.spouseId = null;
+            if (ind.parentIds) ind.parentIds = ind.parentIds.filter(pid => !idsToDelete.includes(pid));
+            if (ind.childrenIds) ind.childrenIds = ind.childrenIds.filter(cid => !idsToDelete.includes(cid));
+        });
+
+        this.closeInfoPanel();
+        this.renderPedigree();
+        this.autoLayout();
     }
 
     zoomIn() { this.zoomLevel = Math.min(this.zoomLevel * 1.2, 3); this.applyTransform(); }
@@ -2127,27 +2498,195 @@ class MedicalPedigreeAnalyzer {
     endPan() { this.isDragging = false; }
 
     // File operations
+    // exportChart() {
+    //     try {
+    //         this.renderPedigree();
+    //         const svg = document.getElementById('pedigreeChart');
+    //         const svgClone = svg.cloneNode(true);
+
+    //         const colorText = getComputedStyle(document.body).getPropertyValue('--color-text').trim() || '#222';
+    //         svgClone.querySelectorAll('style').forEach(s => s.remove());
+
+    //         const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    //         if (!svg.querySelector('style')) {
+    //             style.textContent = `
+    //             .connection-line { stroke: ${colorText}; stroke-width: 2; }
+    //             .marriage-line { stroke: ${colorText}; stroke-width: 2; }
+    //             .marriage-line--separated { stroke-dasharray: 4,2; }
+    //             .marriage-line-double { stroke: ${colorText}; stroke-width: 2; }
+    //             .marriage-line-slash { stroke: ${colorText}; stroke-width: 2; }
+    //             .generation-line { stroke: ${colorText}; stroke-width: 1; }
+    //             .individual-symbol { stroke: ${colorText}; stroke-width: 2; }
+    //             /* Do NOT set fill here, let inline SVG attributes control it */
+    //             .individual-text { font-family: Arial, sans-serif; font-size: 14px; fill: ${colorText}; }
+    //         `;
+    //             svg.insertBefore(style, svg.firstChild);
+    //         }
+    //         svgClone.insertBefore(style, svgClone.firstChild);
+
+    //         // Serialize the clone, not the live SVG
+    //         const svgData = new XMLSerializer().serializeToString(svgClone);
+
+    //         // Show preview modal
+    //         const modal = document.getElementById('exportPreviewModal');
+    //         const container = document.getElementById('svgPreviewContainer');
+    //         container.innerHTML = svgData;
+    //         modal.style.display = 'flex';
+
+    //         // Close preview
+    //         document.getElementById('closePreviewBtn').onclick = () => {
+    //             modal.style.display = 'none';
+    //         };
+
+    //         // Confirm export
+    //         document.getElementById('confirmExportBtn').onclick = () => {
+    //             const blob = new Blob([svgData], { type: 'image/svg+xml' });
+    //             const url = URL.createObjectURL(blob);
+    //             const link = document.createElement('a');
+    //             link.href = url;
+    //             link.download = `pedigree-${new Date().toISOString().slice(0, 10)}.svg`;
+    //             document.body.appendChild(link);
+    //             link.click();
+    //             document.body.removeChild(link);
+    //             URL.revokeObjectURL(url);
+    //             modal.style.display = 'none';
+    //             alert('Chart exported successfully as SVG!');
+    //         };
+    //     } catch (error) {
+    //         console.error('Export error:', error);
+    //         alert('Error exporting chart.');
+    //     }
+    // }
+
+    // exportChart() {
+    //     try {
+    //         this.renderPedigree();
+    //         this.debugSvgGroups();
+
+    //         // Clone the SVG so we don't affect the live chart
+    //         const svg = document.getElementById('pedigreeChart');
+    //         const svgClone = svg.cloneNode(true);
+
+    //         // Remove any existing <style> blocks in the clone
+    //         svgClone.querySelectorAll('style').forEach(s => s.remove());
+
+    //         // Get the computed color for lines based on current mode
+    //         const colorText = getComputedStyle(document.body).getPropertyValue('--color-text').trim() || '#222';
+
+    //         // Inject export style into the clone
+    //         const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    //         style.textContent = `
+    //         .connection-line { stroke: ${colorText}; stroke-width: 2; }
+    //         .marriage-line { stroke: ${colorText}; stroke-width: 2; }
+    //         .marriage-line--separated { stroke-dasharray: 4,2; }
+    //         .marriage-line-double { stroke: ${colorText}; stroke-width: 2; }
+    //         .marriage-line-slash { stroke: ${colorText}; stroke-width: 2; }
+    //         .generation-line { stroke: ${colorText}; stroke-width: 1; }
+    //         .individual-symbol { stroke: ${colorText}; stroke-width: 2; }
+    //         /* Do NOT set fill here, let inline SVG attributes control it */
+    //         .individual-text { font-family: Arial, sans-serif; font-size: 14px; fill: ${colorText}; }
+    //     `;
+    //         svgClone.insertBefore(style, svgClone.firstChild);
+
+    //         // Serialize the clone, not the live SVG
+    //         const svgData = new XMLSerializer().serializeToString(svgClone);
+
+    //         // Show preview modal
+    //         const modal = document.getElementById('exportPreviewModal');
+    //         const container = document.getElementById('svgPreviewContainer');
+    //         const svgBlob = new Blob([svgData], { type: 'image/svg+xml' });
+    //         const previewUrl = URL.createObjectURL(svgBlob);
+    //         container.innerHTML = `<iframe src="${previewUrl}" style="width:100%;height:600px;border:none;background:white"></iframe>`;
+    //         modal.style.display = 'flex';
+
+    //         // Close preview
+    //         document.getElementById('closePreviewBtn').onclick = () => {
+    //             modal.style.display = 'none';
+    //             URL.revokeObjectURL(previewUrl);
+    //         };
+
+    //         // Confirm export
+    //         document.getElementById('confirmExportBtn').onclick = () => {
+    //             const blob = new Blob([svgData], { type: 'image/svg+xml' });
+    //             const url = URL.createObjectURL(blob);
+    //             const link = document.createElement('a');
+    //             link.href = url;
+    //             link.download = `pedigree-${new Date().toISOString().slice(0, 10)}.svg`;
+    //             document.body.appendChild(link);
+    //             link.click();
+    //             document.body.removeChild(link);
+    //             URL.revokeObjectURL(url);
+    //             modal.style.display = 'none';
+    //             alert('Chart exported successfully as SVG!');
+    //         };
+    //     } catch (error) {
+    //         console.error('Export error:', error);
+    //         alert('Error exporting chart.');
+    //     }
+    // }
+
+    // ...existing code...
     exportChart() {
         try {
+            this.renderPedigree();
             const svg = document.getElementById('pedigreeChart');
-            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgClone = svg.cloneNode(true);
 
-            const blob = new Blob([svgData], { type: 'image/svg+xml' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `pedigree-${new Date().toISOString().slice(0, 10)}.svg`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            // Remove any existing <style> blocks in the clone
+            svgClone.querySelectorAll('style').forEach(s => s.remove());
 
-            alert('Chart exported successfully as SVG!');
+            // Get the computed color for lines based on current mode
+            const colorText = getComputedStyle(document.body).getPropertyValue('--color-text').trim() || '#222';
+
+            // Inject export style into the clone
+            const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+            style.textContent = `
+            .connection-line { stroke: ${colorText}; stroke-width: 2; }
+            .marriage-line { stroke: ${colorText}; stroke-width: 2; }
+            .marriage-line--separated { stroke-dasharray: 4,2; }
+            .marriage-line-double { stroke: ${colorText}; stroke-width: 2; }
+            .marriage-line-slash { stroke: ${colorText}; stroke-width: 2; }
+            .generation-line { stroke: ${colorText}; stroke-width: 1; }
+            .individual-symbol { stroke: ${colorText}; stroke-width: 2; }
+            /* Do NOT set fill here, let inline SVG attributes control it */
+            .individual-text { font-family: Arial, sans-serif; font-size: 14px; fill: ${colorText}; }
+        `;
+            svgClone.insertBefore(style, svgClone.firstChild);
+
+            // Serialize the clone, not the live SVG
+            const svgData = new XMLSerializer().serializeToString(svgClone);
+
+            // Show preview modal
+            const modal = document.getElementById('exportPreviewModal');
+            const container = document.getElementById('svgPreviewContainer');
+            container.innerHTML = svgData; // Show SVG directly for best fidelity
+            modal.style.display = 'flex';
+
+            // Close preview
+            document.getElementById('closePreviewBtn').onclick = () => {
+                modal.style.display = 'none';
+            };
+
+            // Confirm export
+            document.getElementById('confirmExportBtn').onclick = () => {
+                const blob = new Blob([svgData], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `pedigree-${new Date().toISOString().slice(0, 10)}.svg`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                modal.style.display = 'none';
+                alert('Chart exported successfully as SVG!');
+            };
         } catch (error) {
             console.error('Export error:', error);
             alert('Error exporting chart.');
         }
     }
+    // ...existing code...
 
     exportRiskReport() {
         const report = this.generateRiskReport();
@@ -2298,14 +2837,47 @@ class MedicalPedigreeAnalyzer {
         });
     }
 
+    // deleteSelectedIndividuals() {
+    //     // Prevent deleting the proband
+    //     const idsToDelete = this.selectedIndividuals.filter(id => id !== this.pedigreeData.probandId);
+    //     if (idsToDelete.length === 0) {
+    //         alert('Cannot delete the proband. To delete this individual, please assign a new proband first.');
+    //         return;
+    //     }
+    //     if (!confirm(`Are you sure you want to delete the selected individual(s)? This cannot be undone.`)) return;
+
+    //     this.pedigreeData.individuals = this.pedigreeData.individuals.filter(ind => !idsToDelete.includes(ind.id));
+    //     this.pedigreeData.individuals.forEach(ind => {
+    //         if (idsToDelete.includes(ind.spouseId)) ind.spouseId = null;
+    //         if (ind.parentIds) ind.parentIds = ind.parentIds.filter(pid => !idsToDelete.includes(pid));
+    //         if (ind.childrenIds) ind.childrenIds = ind.childrenIds.filter(cid => !idsToDelete.includes(cid));
+    //     });
+    //     this.selectedIndividuals = [];
+    //     this.selectedIndividual = null;
+    //     this.closeInfoPanel();
+    //     this.renderPedigree();
+    // }
+
     deleteSelectedIndividuals() {
         // Prevent deleting the proband
-        const idsToDelete = this.selectedIndividuals.filter(id => id !== this.pedigreeData.probandId);
+        let idsToDelete = this.selectedIndividuals.filter(id => id !== this.pedigreeData.probandId);
+
+        // Add spouses of selected individuals
+        const spouseIds = [];
+        idsToDelete.forEach(id => {
+            const ind = this.getIndividualById(id);
+            if (ind && ind.spouseId && !idsToDelete.includes(ind.spouseId) && ind.spouseId !== this.pedigreeData.probandId) {
+                spouseIds.push(ind.spouseId);
+            }
+        });
+        idsToDelete = [...new Set([...idsToDelete, ...spouseIds])];
+
         if (idsToDelete.length === 0) {
             alert('Cannot delete the proband. To delete this individual, please assign a new proband first.');
             return;
         }
-        if (!confirm(`Are you sure you want to delete the selected individual(s)? This cannot be undone.`)) return;
+
+        if (!confirm(`Are you sure you want to delete the selected individual(s)?\nSpouses will also be deleted. This cannot be undone.`)) return;
 
         this.pedigreeData.individuals = this.pedigreeData.individuals.filter(ind => !idsToDelete.includes(ind.id));
         this.pedigreeData.individuals.forEach(ind => {
@@ -2317,6 +2889,7 @@ class MedicalPedigreeAnalyzer {
         this.selectedIndividual = null;
         this.closeInfoPanel();
         this.renderPedigree();
+        this.autoLayout();
     }
 }
 
@@ -2425,4 +2998,89 @@ if (window.location.pathname.endsWith('login.html')) {
     }
 } else {
     new MedicalPedigreeAnalyzer();
+}
+
+/**
+ * Custom confirm dialog with Yes/No buttons.
+ * @param {string} message - The message to display.
+ * @returns {Promise<boolean>} Resolves to true if Yes, false if No.
+ */
+function customConfirm(message) {
+    return new Promise((resolve) => {
+        // Overlay
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = 0;
+        overlay.style.left = 0;
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.background = 'rgba(0,0,0,0.35)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'flex-start'; // Align to top
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = 9999;
+
+        // Dialog box
+        const box = document.createElement('div');
+        box.style.background = '#2d2323';
+        box.style.color = '#fff';
+        box.style.padding = '28px 32px 18px 32px';
+        box.style.borderRadius = '14px';
+        box.style.boxShadow = '0 2px 24px rgba(0,0,0,0.25)';
+        box.style.minWidth = '320px';
+        box.style.maxWidth = '90vw';
+        box.style.textAlign = 'center';
+        box.style.fontSize = '1.08em';
+        box.style.marginTop = '40px'; // Add margin from the top
+
+        // Message
+        const msg = document.createElement('div');
+        msg.style.marginBottom = '22px';
+        msg.textContent = message;
+        box.appendChild(msg);
+
+        // Buttons
+        const btnRow = document.createElement('div');
+        btnRow.style.display = 'flex';
+        btnRow.style.justifyContent = 'center';
+        btnRow.style.gap = '18px';
+
+        const btnNo = document.createElement('button');
+        btnNo.textContent = 'No';
+        btnNo.style.background = '#a44';
+        btnNo.style.color = '#fff';
+        btnNo.style.border = 'none';
+        btnNo.style.padding = '8px 28px';
+        btnNo.style.borderRadius = '8px';
+        btnNo.style.fontSize = '1em';
+        btnNo.style.cursor = 'pointer';
+
+        const btnYes = document.createElement('button');
+        btnYes.textContent = 'Yes';
+        btnYes.style.background = '#f90';
+        btnYes.style.color = '#fff';
+        btnYes.style.border = 'none';
+        btnYes.style.padding = '8px 28px';
+        btnYes.style.borderRadius = '8px';
+        btnYes.style.fontSize = '1em';
+        btnYes.style.cursor = 'pointer';
+
+        btnNo.onclick = () => { document.body.removeChild(overlay); resolve(false); };
+        btnYes.onclick = () => { document.body.removeChild(overlay); resolve(true); };
+
+        btnRow.appendChild(btnNo);
+        btnRow.appendChild(btnYes);
+        box.appendChild(btnRow);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        // Keyboard support
+        btnYes.focus();
+        overlay.tabIndex = -1;
+        overlay.onkeydown = (e) => {
+            if (e.key === 'Escape') { btnNo.click(); }
+            if (e.key === 'Enter') { btnYes.click(); }
+        };
+        overlay.focus();
+    });
 }

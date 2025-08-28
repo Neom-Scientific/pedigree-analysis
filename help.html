@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedigree Analysis Tool</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="help-container">
+        <header class="app-header">
+            <div class="container flex justify-between items-center">
+                <div class="header-logo">
+                    <img src="./public/neom-logo.png" alt="Neom Scientific Solutions Pvt. Ltd." width="50" height="50"
+                        class="logo" />
+                    <div>
+                        <h1>Pedigree Analysis Tool</h1>
+                        <p class="subtitle">Professional Genetic Counseling Software</p>
+                    </div>
+                </div>
+                <a href="index.html" class="btn" style="margin-left: 2rem;">&#8592; Back to Home</a>
+            </div>
+            <!-- <div class="container" style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <h1>Help &amp; Documentation</h1>
+                    <p class="subtitle">How to use the Pedigree Analysis Tool</p>
+                </div>
+                <a href="index.html" class="btn" style="margin-left: 2rem;">&#8592; Back to Home</a>
+            </div> -->
+        </header>
+        <main class="help-content container">
+            <section>
+                <h2>Getting Started</h2>
+                <p>
+                    Use the controls panel to add individuals, parents, and relationships.<br>
+                    Click on any individual in the chart to view or edit their details.
+                </p>
+            </section>
+            <section>
+                <h2>How to add a Individual(s)?</h2>
+                <ul>
+                    <li>Select the Individual first to whom you want to add.</li>
+                    <li>Click the appropriate button to add individual(s) to the selected one (like Add Child, Add Parent, etc.)</li>
+                    <li>Fill the details in the popup.</li>
+                </ul>
+            </section>
+            <section>
+                <h2>Tips</h2>
+                <ul>
+                    <li>Click and drag the chart to pan.</li>
+                    <li>Use the controls to add, edit, or remove family members.</li>
+                    <li>Click symbols for more information.</li>
+                </ul>
+            </section>
+            <section>
+                <h2>General Rules:</h2>
+                <ul>
+                    <li>You can add upto 10 individuals in one generation, even it is siblings or their spouses</li>
+                    <li>Each individual can have only one spouse</li>
+                    <li>Each individual can have maximum of 2 parents</li>
+                    <li>Add the Great-grandparents at the end</li>
+                    <li>You can only add the parent's of spouse in the <b>III - Parents & Proband </b></li>
+                    <li>You cannot add the siblings of the <b>II - Grandparents</b> f you added the parents of proband's spouse.</li>
+                    <li>If you are adding the parents of both proband and it's spouse , then ensure while adding their siblings accordingly.</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>

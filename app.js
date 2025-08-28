@@ -21,6 +21,7 @@ class MedicalPedigreeAnalyzer {
     hideStartScreen() { document.getElementById('chartOverlay').classList.add('hidden'); }
 
     setupEventListeners() {
+        document.getElementById('autoLayoutBtn').classList.add('hidden');
         const svg = document.getElementById('pedigreeChart');
         const events = [
             ['addProbandBtn', 'click', () => this.addProband()],
@@ -465,6 +466,9 @@ class MedicalPedigreeAnalyzer {
             originalSiblings.length > 2 ||
             (originalSiblings.length > 1 && nonTwinCount > 0)
         ) {
+            if(twinPairsCount > 0){
+                console.log('have twins', twinPairsCount);
+            }
             // Standard sibship line for >2 siblings or twins + other siblings
             group.appendChild(this.createSvgElement('line', {
                 x1: firstSiblingX,
@@ -743,35 +747,54 @@ class MedicalPedigreeAnalyzer {
     //     if (!parent1.childrenIds.includes(child.id)) parent1.childrenIds.push(child.id);
     //     if (!parent2.childrenIds.includes(child.id)) parent2.childrenIds.push(child.id);
     
-    //     // --- SHIFT SUBTREE TO MAKE SPACE FOR NEW ANCESTORS ---
-    //     // 1. Place parents at a default distance apart, centered at child's current x
-    //     const parentSpacing = 120;
-    //     const parentY = this.generationY[gen - 1];
-    //     const childX = typeof child.x === 'number' ? child.x : 700;
-    //     parent1.x = childX - parentSpacing / 2;
-    //     parent2.x = childX + parentSpacing / 2;
-    //     parent1.y = parent2.y = parentY;
+    //     // // --- SHIFT SUBTREE TO MAKE SPACE FOR NEW ANCESTORS ---
+    //     // // 1. Place parents at a default distance apart, centered at child's current x
+    //     // const parentSpacing = 120;
+    //     // const parentY = this.generationY[gen - 1];
+    //     // const childX = typeof child.x === 'number' ? child.x : 700;
+    //     // parent1.x = childX - parentSpacing / 2;
+    //     // parent2.x = childX + parentSpacing / 2;
+    //     // parent1.y = parent2.y = parentY;
     
-    //     // 2. Center child under new parents
-    //     child.x = (parent1.x + parent2.x) / 2;
+    //     // // 2. Center child under new parents
+    //     // child.x = (parent1.x + parent2.x) / 2;
     
-    //     // 3. Recursively shift all descendants to keep them centered under their parents
-    //     const shiftDescendants = (ind) => {
-    //         if (!ind.childrenIds || !ind.childrenIds.length) return;
-    //         const children = ind.childrenIds.map(cid => this.getIndividualById(cid)).filter(Boolean);
-    //         if (!children.length) return;
-    //         // Center children under their parents' midpoint
-    //         const midX = (ind.x + (ind.spouseId ? this.getIndividualById(ind.spouseId)?.x || ind.x : ind.x)) / (ind.spouseId ? 2 : 1);
-    //         const totalWidth = (children.length - 1) * this.individualSpacing;
-    //         let startX = midX - totalWidth / 2;
-    //         children.forEach((child, idx) => {
-    //             child.x = startX + idx * this.individualSpacing;
-    //             child.y = this.generationY[child.generation - 1];
-    //             shiftDescendants(child);
-    //         });
-    //     };
-    //     shiftDescendants(parent1);
-    //     shiftDescendants(parent2);
+    //     // // 3. Recursively shift all descendants to keep them centered under their parents
+    //     // const shiftDescendants = (ind) => {
+    //     //     if (!ind.childrenIds || !ind.childrenIds.length) return;
+    //     //     const children = ind.childrenIds.map(cid => this.getIndividualById(cid)).filter(Boolean);
+    //     //     if (!children.length) return;
+    //     //     // Center children under their parents' midpoint
+    //     //     const midX = (ind.x + (ind.spouseId ? this.getIndividualById(ind.spouseId)?.x || ind.x : ind.x)) / (ind.spouseId ? 2 : 1);
+    //     //     const totalWidth = (children.length - 1) * this.individualSpacing;
+    //     //     let startX = midX - totalWidth / 2;
+    //     //     children.forEach((child, idx) => {
+    //     //         child.x = startX + idx * this.individualSpacing;
+    //     //         child.y = this.generationY[child.generation - 1];
+    //     //         shiftDescendants(child);
+    //     //     });
+    //     // };
+    //     // shiftDescendants(parent1);
+    //     // shiftDescendants(parent2);
+        
+    //     const proband = this.getIndividualById('III-1');
+    //     if (proband) {
+    //         // Get all ancestors 3 generations up (great-grandparents)
+    //         const allGreatGrandparents = this.getAncestors(proband.id, 3);
+    //         // Filter to only those whose id starts with "I"
+    //         const greatGrandparents = allGreatGrandparents.filter(anc => anc.id && anc.id.startsWith('I'));
+    //         const isGreatGrandparent = greatGrandparents.some(
+    //             anc => anc.id === parent1.id || anc.id === parent2.id
+    //         );
+    //         if (isGreatGrandparent) {
+    //             // Shift only the great-grandparents' x positions by 200
+    //             greatGrandparents.forEach(ind => {
+    //                 console.log('ind', ind.id, ind.x);
+    //                 ind.x = (typeof ind.x === 'number' ? ind.x : 700) + 200;
+    //                 console.log('ind new x', ind.id, ind.x);
+    //             });
+    //         }
+    //     }
     
     //     this.autoLayout();
     //     this.calculateAllRisks();
@@ -779,6 +802,40 @@ class MedicalPedigreeAnalyzer {
     //     if (this.selectedIndividual) this.selectIndividual(this.selectedIndividual.id);
     //     alert(`Parents ${name1} and ${name2} added successfully!`);
     // }
+
+    shiftSubtree(indId, shiftX) {
+        const visited = new Set();
+        const shift = (currentId) => {
+            if (visited.has(currentId)) return;
+            visited.add(currentId);
+            const individual = this.getIndividualById(currentId);
+            if (individual) {
+                individual.x = (typeof individual.x === 'number' ? individual.x : 700) + shiftX;
+                if (individual.childrenIds && individual.childrenIds.length) {
+                    individual.childrenIds.forEach(cid => shift(cid));
+                }
+            }
+        };
+        shift(indId);
+    }
+
+    getAncestors(indId, generations) {
+        const ancestors = new Set();
+        const traverse = (currentId, genLeft) => {
+            if (genLeft === 0) return;
+            const individual = this.getIndividualById(currentId);
+            if (individual && individual.parentIds) {
+                individual.parentIds.forEach(pid => {
+                    if (!ancestors.has(pid)) {
+                        ancestors.add(pid);
+                        traverse(pid, genLeft - 1);
+                    }
+                });
+            }
+        };
+        traverse(indId, generations);
+        return Array.from(ancestors).map(id => this.getIndividualById(id)).filter(Boolean);
+    }
 
     addSpouse() {
         if (!this.selectedIndividual) return;
@@ -1759,53 +1816,138 @@ class MedicalPedigreeAnalyzer {
                         b.x = (pairMid + spacing / 2) + 35;
                     }
                 }
+                // else {
+                //     // --- Improved logic: Sibling placement ---
+                //     // Find siblings (excluding a and b themselves)
+                //     const aSibs = aSiblings.filter(s => s.id !== a.id);
+                //     const bSibs = bSiblings.filter(s => s.id !== b.id);
+                //     if (aGrandParents.length >= 1 && aParents.length === 2) {
+
+                //         // Spread a's parents around the midpoint of their own parents (the grandparents)
+                //         let gpMid;
+                //         if (aGrandParents.length === 2 && typeof aGrandParents[0].x === 'number' && typeof aGrandParents[1].x === 'number') {
+                //             gpMid = (aGrandParents[0].x + aGrandParents[1].x) / 2;
+                //         } else if (aGrandParents.length === 1 && typeof aGrandParents[0].x === 'number') {
+                //             gpMid = aGrandParents[0].x;
+                //         }
+                //         const parentDistance = 120;
+                //         if (typeof gpMid === 'number') {
+                //             if (aGrandParents[0]) aGrandParents[0]._desiredX = (gpMid - parentDistance / 2) + 250;
+                //             if (aGrandParents[1]) aGrandParents[1]._desiredX = (gpMid + parentDistance / 2) + 300;
+                //             if (aParents[0]) aParents[0]._desiredX = (gpMid - parentDistance / 2) + 300;
+                //             if (aParents[1]) aParents[1]._desiredX = (gpMid + parentDistance / 2) + 350;
+                //             // a.x = (gpMid - spacing / 2) + 140;
+                //             // b.x = (gpMid + spacing / 2) + 300;
+                //         }
+                //     }
+
+                //     // Find midpoint between parents
+                //     let aMid = aParents.length === 2 ? ((aParents[0].x + aParents[1].x) / 2) : aParents[0].x;
+                //     let bMid = bParents.length === 2 ? ((bParents[0].x + bParents[1].x) / 2) : bParents[0].x;
+                //     let pairMid = (aMid + bMid) / 2;
+                //     const spacing = this.individualSpacing;
+
+                //     // Total number of individuals in the row: b's siblings + a + b + a's siblings
+                //     const total = bSibs.length + 2 + aSibs.length;
+                //     // Start X so that the couple is always centered at pairMid
+                //     let startX = pairMid - ((total - 1) / 2) * spacing;
+
+                //     // Place a's siblings (left side), with their spouses immediately after
+                //     let currIdx = 0;
+                //     aSibs.forEach((sib) => {
+                //         console.log('sib', sib)
+                //         sib.x = startX + currIdx * spacing;
+                //         sib.y = this.generationY[generation - 1];
+                //         currIdx++;
+                //         // Place spouse immediately after, if any and not already placed and not in aSibs/bSibs
+                //         if (sib.spouseId) {
+                //             const spouse = individuals.find(i => i.id === sib.spouseId);
+                //             // Only place if spouse is not in aSibs, bSibs, a, or b
+                //             if (spouse) {
+                //                 spouse.x = startX + currIdx * spacing;
+                //                 spouse.y = this.generationY[generation - 1];
+                //                 currIdx++;
+                //             }
+                //         }
+                //     });
+
+                //     // Place a (just after a's siblings and their spouses)
+                //     a.x = startX + currIdx * spacing;
+                //     a.y = this.generationY[generation - 1];
+                //     currIdx++;
+
+                //     // Place b (just after a)
+                //     b.x = startX + currIdx * spacing;
+                //     b.y = this.generationY[generation - 1];
+                //     currIdx++;
+
+                //     // Place b's siblings (right side), with their spouses immediately after
+                //     bSibs.forEach((sib) => {
+                //         sib.x = startX + currIdx * spacing;
+                //         sib.y = this.generationY[generation - 1];
+                //         currIdx++;
+                //         // Place spouse immediately after, if any and not already placed
+                //         if (sib.spouseId) {
+                //             const spouse = individuals.find(i => i.id === sib.spouseId);
+                //             if (spouse) {
+                //                 spouse.x = startX + currIdx * spacing;
+                //                 spouse.y = this.generationY[generation - 1];
+                //                 currIdx++;
+                //             }
+                //         }
+                //     });
+                // }
                 else {
-                    // --- Improved logic: Sibling placement ---
+                    // --- Improved logic: Sibling placement with parent shifting ---
                     // Find siblings (excluding a and b themselves)
                     const aSibs = aSiblings.filter(s => s.id !== a.id);
                     const bSibs = bSiblings.filter(s => s.id !== b.id);
-                    if (aGrandParents.length >= 1 && aParents.length === 2) {
-
-                        // Spread a's parents around the midpoint of their own parents (the grandparents)
-                        let gpMid;
-                        if (aGrandParents.length === 2 && typeof aGrandParents[0].x === 'number' && typeof aGrandParents[1].x === 'number') {
-                            gpMid = (aGrandParents[0].x + aGrandParents[1].x) / 2;
-                        } else if (aGrandParents.length === 1 && typeof aGrandParents[0].x === 'number') {
-                            gpMid = aGrandParents[0].x;
-                        }
-                        const parentDistance = 120;
-                        if (typeof gpMid === 'number') {
-                            if (aGrandParents[0]) aGrandParents[0]._desiredX = (gpMid - parentDistance / 2) + 250;
-                            if (aGrandParents[1]) aGrandParents[1]._desiredX = (gpMid + parentDistance / 2) + 300;
-                            if (aParents[0]) aParents[0]._desiredX = (gpMid - parentDistance / 2) + 300;
-                            if (aParents[1]) aParents[1]._desiredX = (gpMid + parentDistance / 2) + 350;
-                            // a.x = (gpMid - spacing / 2) + 140;
-                            // b.x = (gpMid + spacing / 2) + 300;
-                        }
-                    }
-
+                
                     // Find midpoint between parents
                     let aMid = aParents.length === 2 ? ((aParents[0].x + aParents[1].x) / 2) : aParents[0].x;
                     let bMid = bParents.length === 2 ? ((bParents[0].x + bParents[1].x) / 2) : bParents[0].x;
                     let pairMid = (aMid + bMid) / 2;
                     const spacing = this.individualSpacing;
-
-                    // Total number of individuals in the row: b's siblings + a + b + a's siblings
-                    const total = bSibs.length + 2 + aSibs.length;
-                    // Start X so that the couple is always centered at pairMid
+                
+                    // --- Center parents under their own parents (grandparents) ---
+                    function centerParentsUnderGrandparents(parents) {
+                        if (parents.length === 2) {
+                            const gp1 = parents[0].parentIds ? parents[0].parentIds.map(pid => individuals.find(i => i.id === pid)).filter(Boolean) : [];
+                            const gp2 = parents[1].parentIds ? parents[1].parentIds.map(pid => individuals.find(i => i.id === pid)).filter(Boolean) : [];
+                            if (gp1.length === 2) {
+                                const gpMid = (gp1[0].x + gp1[1].x) / 2;
+                                const parentDistance = Math.abs(parents[0].x - parents[1].x);
+                                parents[0].x = gpMid - parentDistance / 2;
+                                parents[1].x = gpMid + parentDistance / 2;
+                            }
+                            if (gp2.length === 2) {
+                                const gpMid = (gp2[0].x + gp2[1].x) / 2;
+                                const parentDistance = Math.abs(parents[0].x - parents[1].x);
+                                parents[0].x = gpMid - parentDistance / 2;
+                                parents[1].x = gpMid + parentDistance / 2;
+                            }
+                        }
+                    }
+                    centerParentsUnderGrandparents(aParents);
+                    centerParentsUnderGrandparents(bParents);
+                
+                    // Recompute midpoints after shifting parents
+                    aMid = aParents.length === 2 ? ((aParents[0].x + aParents[1].x) / 2) : aParents[0].x;
+                    bMid = bParents.length === 2 ? ((bParents[0].x + bParents[1].x) / 2) : bParents[0].x;
+                    pairMid = (aMid + bMid) / 2;
+                
+                    // --- Now layout siblings and couple centered under pairMid ---
+                    const total = aSibs.length + 2 + bSibs.length;
                     let startX = pairMid - ((total - 1) / 2) * spacing;
-
-                    // Place a's siblings (left side), with their spouses immediately after
                     let currIdx = 0;
+                
+                    // Place a's siblings (left side)
                     aSibs.forEach((sib) => {
-                        console.log('sib', sib)
                         sib.x = startX + currIdx * spacing;
                         sib.y = this.generationY[generation - 1];
                         currIdx++;
-                        // Place spouse immediately after, if any and not already placed and not in aSibs/bSibs
                         if (sib.spouseId) {
                             const spouse = individuals.find(i => i.id === sib.spouseId);
-                            // Only place if spouse is not in aSibs, bSibs, a, or b
                             if (spouse) {
                                 spouse.x = startX + currIdx * spacing;
                                 spouse.y = this.generationY[generation - 1];
@@ -1813,23 +1955,22 @@ class MedicalPedigreeAnalyzer {
                             }
                         }
                     });
-
-                    // Place a (just after a's siblings and their spouses)
+                
+                    // Place a
                     a.x = startX + currIdx * spacing;
                     a.y = this.generationY[generation - 1];
                     currIdx++;
-
-                    // Place b (just after a)
+                
+                    // Place b
                     b.x = startX + currIdx * spacing;
                     b.y = this.generationY[generation - 1];
                     currIdx++;
-
-                    // Place b's siblings (right side), with their spouses immediately after
+                
+                    // Place b's siblings (right side)
                     bSibs.forEach((sib) => {
                         sib.x = startX + currIdx * spacing;
                         sib.y = this.generationY[generation - 1];
                         currIdx++;
-                        // Place spouse immediately after, if any and not already placed
                         if (sib.spouseId) {
                             const spouse = individuals.find(i => i.id === sib.spouseId);
                             if (spouse) {
@@ -2900,13 +3041,13 @@ function getCookie(name) {
     return null;
 }
 
-if (
-    !window.location.pathname.endsWith('login.html') &&
-    !window.location.pathname.endsWith('register.html') &&
-    !getCookie('pedigree_analysis_tool_user')
-) {
-    window.location.href = 'login.html';
-}
+//if (
+//    !window.location.pathname.endsWith('login.html') &&
+//    !window.location.pathname.endsWith('register.html') &&
+//    !getCookie('pedigree_analysis_tool_user')
+//) {
+//    window.location.href = 'login.html';
+//}
 
 if (window.location.pathname.endsWith('login.html')) {
     const loginForm = document.getElementById('loginForm');

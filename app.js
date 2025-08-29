@@ -2316,8 +2316,11 @@ class MedicalPedigreeAnalyzer {
                 return this.calculateAutosomalDominantRisk(ind);
             } else if (pattern === 'autosomal_recessive') {
                 return this.calculateAutosomalRecessiveRisk(ind, freq);
-            } else if (pattern === 'x_linked') {
-                return this.calculateXLinkedRisk(ind);
+            } else if (pattern === 'x_linked_recessive') {
+                return this.calculateXLinkedRecessiveRisk(ind);
+            }
+            else if (pattern === 'x_linked_dominant') {
+                return this.calculateXLinkedDominantRisk(ind);
             }
             return {};
         }
@@ -2398,7 +2401,7 @@ class MedicalPedigreeAnalyzer {
         return risks;
     }
 
-    calculateXLinkedRisk(ind) {
+    calculateXLinkedRecessiveRisk(ind) {
         const risks = {};
 
         const mother = this.getIndividualById(ind.parentIds?.find(id => this.getIndividualById(id)?.gender === 'female'));
@@ -2417,6 +2420,30 @@ class MedicalPedigreeAnalyzer {
         }
 
         return risks;
+    }
+
+    calculateXLinkedDominantRisk(ind){
+        const risks = {};
+
+        const mother = this.getIndividualById(ind.parentIds?.find(id => this.getIndividualById(id)?.gender === 'female'));
+        const father = this.getIndividualById(ind.parentIds?.find(id => this.getIndividualById(id)?.gender === 'male'));
+    
+        if (ind.gender === 'male') {
+            // Males inherit X from mother
+            if (mother && mother.affected) {
+                risks.affected = 50; // 50% chance if mother is affected
+            }
+        } else if (ind.gender === 'female') {
+            // Females inherit X from both parents
+            if (father && father.affected) {
+                risks.affected = 100; // all daughters affected if father is affected
+            } else if (mother && mother.affected) {
+                risks.affected = 50; // 50% chance if mother is affected
+            }
+        }
+    
+        return risks;
+    
     }
 
     isKnownCarrier(ind) {

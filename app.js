@@ -3068,13 +3068,13 @@ function getCookie(name) {
     return null;
 }
 
-//if (
-//    !window.location.pathname.endsWith('login.html') &&
-//    !window.location.pathname.endsWith('register.html') &&
-//    !getCookie('pedigree_analysis_tool_user')
-//) {
-//    window.location.href = 'login.html';
-//}
+if (
+   !window.location.pathname.endsWith('login.html') &&
+   !window.location.pathname.endsWith('register.html') &&
+   !getCookie('pedigree_analysis_tool_user')
+) {
+   window.location.href = 'login.html';
+}
 
 if (window.location.pathname.endsWith('login.html')) {
     const loginForm = document.getElementById('loginForm');
@@ -3083,6 +3083,7 @@ if (window.location.pathname.endsWith('login.html')) {
             e.preventDefault();
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+            const application_name = 'pedigree_tool';
             let errorDiv = document.getElementById('loginError');
             if (!errorDiv) {
                 errorDiv = document.createElement('div');
@@ -3097,7 +3098,7 @@ if (window.location.pathname.endsWith('login.html')) {
                 const res = await fetch('https://trf-dashboard-bay.vercel.app/api/login-insert', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password ,application_name})
                 });
                 const data = await res.json();
                 const result = Array.isArray(data) ? data[0] : data;

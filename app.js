@@ -3095,7 +3095,7 @@ if (window.location.pathname.endsWith('login.html')) {
             errorDiv.textContent = '';
 
             try {
-                const res = await fetch('https://trf-dashboard-bay.vercel.app/api/login-insert', {
+                const res = await fetch('https://vide-woad.vercel.app/api/login-insert', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password ,application_name})
@@ -3146,7 +3146,7 @@ if (window.location.pathname.endsWith('login.html')) {
                         password
                     }
                 }
-                const res = await fetch('https://trf-dashboard-bay.vercel.app/api/request-insert', {
+                const res = await fetch('https://vide-woad.vercel.app/api/request-insert', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
